@@ -23,7 +23,7 @@ class Game:
         abort = Button.LEFT in ev3.buttons.pressed()
         if abort:
             self.running = False
-        print("ABort:", abort)
+        #print("ABort:", abort)
         return abort
 
 
@@ -96,9 +96,10 @@ class Robot:
         left_motor = Motor(Port.A)
         right_motor = Motor(Port.D)
         self.robot = DriveBase(
-            left_motor=left_motor, right_motor=right_motor, wheel_diameter=36, axle_track=128
+            left_motor=left_motor, right_motor=right_motor, wheel_diameter=56, axle_track=166.5
         )
         self.color_sensor = ColorSensor(Port.S2)
+        self.us_sensor = UltrasonicSensor(Port.S4)
         self.level_fns = {
             Level.LINE: Robot.lines,
             Level.OBSTACLE: Robot.obstacle,
@@ -115,38 +116,89 @@ class Robot:
     def log(self, msg=""):
         ev3.screen.print(msg)
 
+    def check_blueline(self):
+        r, g, b = self.color_sensor.rgb()
+        #while True:
+        #    r, g, b = self.color_sensor.rgb()
+        #    self.log(str(r) + " " + str(g) + " " + str(b))
+        #    wait(100)
+        return b >= 25 and r < 25 and g < 25
+
     # Level 1: line following
     def lines(self):
+        LIGHT, DARK, K = 66, 13, 1.2
+        mid = (LIGHT + DARK) / 2
+        start_angle = 0
+
         while not self.game.should_abort():
-            LIGHT, DARK, K = 66, 13, 1.2
-            mid = (LIGHT + DARK) / 2
-
+            self.log(str(self.us_sensor.distance()))
+            if self.check_blueline():
+                self.robot.stop()
+                game.running = False
+                return
+            if self.us_sensor.distance() < 100:
+                self.robot.stop()
+                self.log("Obstacle found")
+                continue
+            
             brightness = self.color_sensor.reflection()
-            delta = brightness - mid
-            self.turn_rate = K * delta
+            if brightness <= DARK:
+                start_angle = self.robot.angle()
+                found_gap = False
+                while self.color_sensor.reflection() <= DARK:
+                    self.log("Turning right " + str(start_angle - self.robot.angle()))
+                    self.robot.turn(-2)
+                    if  start_angle - self.robot.angle() > 84:
+                        found_gap = True
+                        break
+                if not found_gap:
+                    self.log("No gap")
+                    continue
+                
+                self.log("Turning back")
+                self.robot.turn(120)
+                self.log("Crossing gap")
+                self.robot.drive(self.DRIVE_SPEED, 0)
+                wait(3000)
 
-            # if brightness >= 4 and brightness <= 6:
-            if brightness >= DARK:
-                self.log("Driving")
-                # self.robot.drive(self.DRIVE_SPEED, self.turn_rate)
-                wait(10)
-                # self.self.straight(50)
+            elif brightness >= LIGHT:
+                self.log("Turning left")
+                self.robot.turn(2)
+
             else:
-                self.log("Turning")
-                self.robot.turn(math.copysign(1, self.turn_rate))
+                delta = brightness - mid
+                self.turn_rate = K * delta
+                self.log("Driving")
+                self.robot.drive(self.DRIVE_SPEED, self.turn_rate)
+                wait(10)
+
             # self.log("T:" + str(self.turn_rate) + ", L:" + str(self.color_sensor.reflection()))
 
     def obstacle(self):
         while not self.game.should_abort():
+            if self.check_blueline():
+                self.robot.stop()
+                return
+            self.robot.turn(90)
             self.log("Obstacle")
 
     def bridge(self):
         while not self.game.should_abort():
+            if self.check_blueline():
+                self.robot.stop()
+                return
             self.log("Bridge")
+            self.robot.straight(300)
 
     def field(self):
         while not self.game.should_abort():
+            if self.check_blueline():
+                self.robot.stop()
+                game.running = False
+                return
             self.log("Field")
+            for i in range(42):
+                self.robot.turn(2)
 
 
 game = Game()
@@ -157,7 +209,7 @@ while True:
     menu.update()
     if game.running:
         robot.start_level(menu.selected)
-        menu.redraw()
+        #menu.select_next()
 
 
 # robot.loop()
