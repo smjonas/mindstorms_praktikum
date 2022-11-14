@@ -4,8 +4,13 @@ Gruppenmitglieder: Lukas Baldner, Jonas Strittmatter, Julian Shen
 ## Aufbau des Roboters
 
 
-## Protokolle
+## Protokoll
+
 ### 24.10.22
+- Sensoren ausprobiert
+- Idenn zur Roboterarchitektur gesammelt
+- Erster Prototyp für den Roboter gebaut
+- Vertrautmachen mit Sensor-Komponenten und Pybricks-API, Einrichten von VS-Code
 
 ### 07.11.22
 - basic Skelett (Roboter-Klasse, erstes Testen des Line-Following-Algorithmus)
@@ -13,6 +18,10 @@ Gruppenmitglieder: Lukas Baldner, Jonas Strittmatter, Julian Shen
 - Übungsblatt nacharbeiten
 - Roboter fertig gebaut
 - Programm für das Linien folgen / Rampe hochfahren konfiguieren
+
+### 07.11.22 - 14.11.22
+- Menü zur Auswahl der Routine für den Roboter
+- Zustandsdiagramm für das Linienfolgen erstellt
 
 ### 14.11.22
 - Vorlesung über Regelung angehört
