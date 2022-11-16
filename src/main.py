@@ -12,7 +12,8 @@ ev3 = EV3Brick()
 
 #TODO separate classes into files
 
-class Game:
+
+class Course:
     def __init__(self):
         self.running = False
 
@@ -21,31 +22,29 @@ class Game:
         if abort:
             self.running = False
         return abort
+    
+    #TODO real enum?
+    class Stage:
+        COUNT = 4
+        LINE, OBSTACLE, BRIDGE, FIELD = range(COUNT)
 
-
-#TODO real enum?
-#TODO put in Game
-class Level:
-    COUNT = 4
-    LINE, OBSTACLE, BRIDGE, FIELD = range(COUNT)
-
-    def to_string(level):
-        return {
-            Level.LINE: "Follow lines",
-            Level.OBSTACLE: "Move obstacle",
-            Level.BRIDGE: "Cross bridge",
-            Level.FIELD: "Color field",
-        }[level]
+        def to_string(Stage):
+            return {
+                Stage.LINE: "Follow lines",
+                Stage.OBSTACLE: "Move obstacle",
+                Stage.BRIDGE: "Cross bridge",
+                Stage.FIELD: "Color field",
+            }[Stage]
 
 
 class Menu:
     SCREEN_WIDTH = ev3.screen.width
     SCREEN_HEIGHT = ev3.screen.height
 
-    def __init__(self, game):
-        self.selected = Level.LINE
+    def __init__(self, course):
+        self.course = course
+        self.selected = course.Stage.LINE
         self.last_pressed = None
-        self.game = game
         self.redraw()
 
     def update(self):
@@ -63,7 +62,7 @@ class Menu:
             self.select_next()
             self.last_pressed = Button.DOWN
         elif Button.CENTER in pressed_buttons:
-            self.game.running = True
+            self.course.running = True
         #TODO decide what to do
         # Probably not needed anymore because of last_pressed-query
         # wait(100)
@@ -71,29 +70,29 @@ class Menu:
     def redraw(self):
         ev3.screen.clear()
         # A few magic numbers here to make the menu look good
-        for i in range(Level.COUNT):
-            ev3.screen.draw_text(3, i * (Menu.SCREEN_HEIGHT / Level.COUNT), Level.to_string(i))
+        for i in range(course.Stage.COUNT):
+            ev3.screen.draw_text(3, i * (Menu.SCREEN_HEIGHT / course.Stage.COUNT), course.Stage.to_string(i))
         ev3.screen.draw_box(
             1,
-            self.selected * (Menu.SCREEN_HEIGHT / Level.COUNT),
+            self.selected * (Menu.SCREEN_HEIGHT / course.Stage.COUNT),
             Menu.SCREEN_WIDTH - 1,
-            (self.selected + 1) * (Menu.SCREEN_HEIGHT / Level.COUNT) - 8,
+            (self.selected + 1) * (Menu.SCREEN_HEIGHT / course.Stage.COUNT) - 8,
         )
 
     def select_next(self):
-        self.selected = (self.selected + 1) % Level.COUNT
+        self.selected = (self.selected + 1) % course.Stage.COUNT
         self.redraw()
 
     def select_prev(self):
-        self.selected = (self.selected - 1) % Level.COUNT
+        self.selected = (self.selected - 1) % course.Stage.COUNT
         self.redraw()
 
 
 class Robot:
     DRIVE_SPEED = 50
 
-    def __init__(self, game):
-        self.game = game
+    def __init__(self, course):
+        self.course = course
 
         left_motor = Motor(Port.A)
         right_motor = Motor(Port.D)
@@ -106,17 +105,17 @@ class Robot:
         self.color_sensor = ColorSensor(Port.S2)
         self.us_sensor = UltrasonicSensor(Port.S4)
 
-        self.level_fns = {
-            Level.LINE: Robot.lines,
-            Level.OBSTACLE: Robot.obstacle,
-            Level.BRIDGE: Robot.bridge,
-            Level.FIELD: Robot.field,
+        self.stage_fns = {
+            course.Stage.LINE: Robot.lines,
+            course.Stage.OBSTACLE: Robot.obstacle,
+            course.Stage.BRIDGE: Robot.bridge,
+            course.Stage.FIELD: Robot.field,
         }
 
-    def start_level(self, level):
+    def start_stage(self, Stage):
         ev3.screen.clear()
-        ev3.screen.print("Level started")
-        self.level_fns[level](self)
+        ev3.screen.print("Stage started")
+        self.stage_fns[Stage](self)
 
     def log(self, msg=""):
         ev3.screen.print(msg)
@@ -130,7 +129,7 @@ class Robot:
         #    wait(100)
         return b >= 25 and r < 25 and g < 25
 
-    # Level 1: Following a white line with gaps and an obstacle
+    # Stage 1: Following a white line with gaps and an obstacle
     def lines(self):
         LIGHT, DARK, K = 66, 13, 1.2
         mid = (LIGHT + DARK) / 2
@@ -143,12 +142,12 @@ class Robot:
         gap_turnback_angle = 120
 
         self.log("Following line")
-        while not self.game.should_abort():
+        while not self.course.should_abort():
             self.log(str(self.us_sensor.distance())) #TODO remove debug log
             if self.check_blueline():
                 self.robot.stop()
                 self.log("Reached end of line")
-                game.running = False
+                course.running = False
                 return
             if self.us_sensor.distance() < obstacle_distance:
                 self.robot.stop()
@@ -190,35 +189,35 @@ class Robot:
                 self.robot.drive(self.DRIVE_SPEED, turn_rate)
                 wait(10)
 
-    # Level 2: Push a block in the corner
+    # Stage 2: Push a block in the corner
     def obstacle(self):
-        while not self.game.should_abort():
+        while not self.course.should_abort():
             if self.check_blueline():
                 self.robot.stop()
                 return
 
-    # Level 3: Cross a bridge with perpendicular ramps leading up/down at the ends
+    # Stage 3: Cross a bridge with perpendicular ramps leading up/down at the ends
     def bridge(self):
-        while not self.game.should_abort():
+        while not self.course.should_abort():
             if self.check_blueline():
                 self.robot.stop()
                 return
 
-    # Level 4: Find a red and white patch of color on the floor
+    # Stage 4: Find a red and white patch of color on the floor
     def field(self):
-        while not self.game.should_abort():
+        while not self.course.should_abort():
             if self.check_blueline():
                 self.robot.stop()
-                game.running = False
+                course.running = False
                 return
 
 
-game = Game()
-robot = Robot(game)
-menu = Menu(game)
+course = Course()
+robot = Robot(course)
+menu = Menu(course)
 
 while True:
     menu.update()
-    if game.running:
-        robot.start_level(menu.selected)
+    if course.running:
+        robot.start_stage(menu.selected)
         #menu.select_next()
