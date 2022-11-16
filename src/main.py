@@ -8,10 +8,6 @@ from pybricks.parameters import Button, Color, Direction, Port, Stop
 from pybricks.robotics import DriveBase
 from pybricks.tools import wait
 
-# This program requires LEGO EV3 MicroPython v2.0 or higher.
-# Click "Open user guide" on the EV3 extension tab for more information.
-
-# Create your objects here.
 ev3 = EV3Brick()
 
 
@@ -23,7 +19,6 @@ class Game:
         abort = Button.LEFT in ev3.buttons.pressed()
         if abort:
             self.running = False
-        #print("ABort:", abort)
         return abort
 
 
@@ -41,7 +36,8 @@ class Level:
 
 
 class Menu:
-    screen_width, screen_height = ev3.screen.width, ev3.screen.height
+    screen_width = ev3.screen.width
+    screen_height = ev3.screen.height
 
     def __init__(self, game):
         self.selected = Level.LINE
@@ -65,10 +61,12 @@ class Menu:
             self.last_pressed = Button.DOWN
         elif Button.CENTER in pressed_buttons:
             self.game.running = True
-        wait(100)
+        # Probably not needed anymore because of last_pressed-query
+        # wait(100)
 
     def redraw(self):
         ev3.screen.clear()
+        # A few magic numbers here to make the menu look good
         for i in range(Level.COUNT):
             ev3.screen.draw_text(3, i * (Menu.screen_height / Level.COUNT), Level.to_string(i))
         ev3.screen.draw_box(
@@ -95,6 +93,8 @@ class Robot:
         self.turn_rate = 0
         left_motor = Motor(Port.A)
         right_motor = Motor(Port.D)
+        # Since we used tracks, axle_track cannot be measured in a sensible way
+        # We set it to the value where it does a 90 degree turn on the parcour floor if we tell it to (other angles do not work therefore).
         self.robot = DriveBase(
             left_motor=left_motor, right_motor=right_motor, wheel_diameter=56, axle_track=166.5
         )
@@ -106,7 +106,6 @@ class Robot:
             Level.BRIDGE: Robot.bridge,
             Level.FIELD: Robot.field,
         }
-        # self.pressure_sensor =
 
     def start_level(self, level):
         ev3.screen.clear()
@@ -124,11 +123,17 @@ class Robot:
         #    wait(100)
         return b >= 25 and r < 25 and g < 25
 
-    # Level 1: line following
+    # Level 1: Following a white line with gaps and an obstacle
     def lines(self):
         LIGHT, DARK, K = 66, 13, 1.2
         mid = (LIGHT + DARK) / 2
+
+        obstacle_distance = 100
+
         start_angle = 0
+        search_angle = 2
+        gap_threshold_angle = 84 # depends on search_angle
+        gap_turnback_angle = 120
 
         while not self.game.should_abort():
             self.log(str(self.us_sensor.distance()))
@@ -136,19 +141,20 @@ class Robot:
                 self.robot.stop()
                 game.running = False
                 return
-            if self.us_sensor.distance() < 100:
+            if self.us_sensor.distance() < obstacle_distance:
                 self.robot.stop()
                 self.log("Obstacle found")
                 continue
             
+            #TODO Refactor nested while loop (program cannot be exited in there)
             brightness = self.color_sensor.reflection()
             if brightness <= DARK:
                 start_angle = self.robot.angle()
                 found_gap = False
                 while self.color_sensor.reflection() <= DARK:
                     self.log("Turning right " + str(start_angle - self.robot.angle()))
-                    self.robot.turn(-2)
-                    if  start_angle - self.robot.angle() > 84:
+                    self.robot.turn(-search_angle)
+                    if  start_angle - self.robot.angle() > gap_threshold_angle:
                         found_gap = True
                         break
                 if not found_gap:
@@ -156,14 +162,15 @@ class Robot:
                     continue
                 
                 self.log("Turning back")
-                self.robot.turn(120)
+                self.robot.turn(gap_turnback_angle)
                 self.log("Crossing gap")
                 self.robot.drive(self.DRIVE_SPEED, 0)
+                # Drive forward for 3s
                 wait(3000)
 
             elif brightness >= LIGHT:
                 self.log("Turning left")
-                self.robot.turn(2)
+                self.robot.turn(search_angle)
 
             else:
                 delta = brightness - mid
@@ -174,6 +181,7 @@ class Robot:
 
             # self.log("T:" + str(self.turn_rate) + ", L:" + str(self.color_sensor.reflection()))
 
+    # Level 2: Push a block in the corner
     def obstacle(self):
         while not self.game.should_abort():
             if self.check_blueline():
@@ -182,6 +190,7 @@ class Robot:
             self.robot.turn(90)
             self.log("Obstacle")
 
+    # Level 3: Cross a bridge with perpendicular ramps leading up/down at the ends
     def bridge(self):
         while not self.game.should_abort():
             if self.check_blueline():
@@ -190,6 +199,7 @@ class Robot:
             self.log("Bridge")
             self.robot.straight(300)
 
+    # Level 4: Find a red and white patch of color on the floor
     def field(self):
         while not self.game.should_abort():
             if self.check_blueline():
@@ -210,6 +220,3 @@ while True:
     if game.running:
         robot.start_level(menu.selected)
         #menu.select_next()
-
-
-# robot.loop()
