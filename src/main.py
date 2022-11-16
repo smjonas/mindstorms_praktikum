@@ -1,5 +1,6 @@
 #!/usr/bin/env pybricks-micropython
 import math
+from enum import Enum
 
 from pybricks.ev3devices import (ColorSensor, GyroSensor, InfraredSensor,
                                  Motor, TouchSensor, UltrasonicSensor)
@@ -24,10 +25,11 @@ class Course:
             self.running = False
         return abort
     
-    #TODO real enum?
-    class Stage:
-        COUNT = 4
-        LINE, OBSTACLE, BRIDGE, FIELD = range(COUNT)
+    class Stage(Enum):
+        LINE = 0
+        OBSTACLE = 1
+        BRIDGE = 2
+        FIELD = 3
 
         def to_string(Stage):
             return {
@@ -70,21 +72,21 @@ class Menu:
     def redraw(self):
         ev3.screen.clear()
         # A few magic numbers here to make the menu look good
-        for i in range(course.Stage.COUNT):
-            ev3.screen.draw_text(3, i * (Menu.SCREEN_HEIGHT / course.Stage.COUNT), course.Stage.to_string(i))
+        for i in range(len(course.Stage)):
+            ev3.screen.draw_text(3, i * (Menu.SCREEN_HEIGHT / len(course.Stage)), course.Stage.to_string(i))
         ev3.screen.draw_box(
             1,
-            self.course.selected_stage * (Menu.SCREEN_HEIGHT / course.Stage.COUNT),
+            self.course.selected_stage * (Menu.SCREEN_HEIGHT / len(course.Stage)),
             Menu.SCREEN_WIDTH - 1,
-            (self.course.selected_stage + 1) * (Menu.SCREEN_HEIGHT / course.Stage.COUNT) - 8,
+            (self.course.selected_stage + 1) * (Menu.SCREEN_HEIGHT / len(course.Stage)) - 8,
         )
 
     def select_next(self):
-        self.course.selected_stage = (self.game.selected_stage + 1) % course.Stage.COUNT
+        self.course.selected_stage = (self.game.selected_stage + 1) % len(course.Stage)
         self.redraw()
 
     def select_prev(self):
-        self.course.selected_stage = (self.game.selected_stage - 1) % course.Stage.COUNT
+        self.course.selected_stage = (self.game.selected_stage - 1) % len(course.Stage)
         self.redraw()
 
 
