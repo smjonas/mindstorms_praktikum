@@ -16,6 +16,7 @@ ev3 = EV3Brick()
 class Course:
     def __init__(self):
         self.running = False
+        self.selected_stage = self.Stage.LINE
 
     def should_abort(self):
         abort = Button.LEFT in ev3.buttons.pressed()
@@ -43,7 +44,6 @@ class Menu:
 
     def __init__(self, course):
         self.course = course
-        self.selected = course.Stage.LINE
         self.last_pressed = None
         self.redraw()
 
@@ -74,17 +74,17 @@ class Menu:
             ev3.screen.draw_text(3, i * (Menu.SCREEN_HEIGHT / course.Stage.COUNT), course.Stage.to_string(i))
         ev3.screen.draw_box(
             1,
-            self.selected * (Menu.SCREEN_HEIGHT / course.Stage.COUNT),
+            self.course.selected_stage * (Menu.SCREEN_HEIGHT / course.Stage.COUNT),
             Menu.SCREEN_WIDTH - 1,
-            (self.selected + 1) * (Menu.SCREEN_HEIGHT / course.Stage.COUNT) - 8,
+            (self.course.selected_stage + 1) * (Menu.SCREEN_HEIGHT / course.Stage.COUNT) - 8,
         )
 
     def select_next(self):
-        self.selected = (self.selected + 1) % course.Stage.COUNT
+        self.course.selected_stage = (self.game.selected_stage + 1) % course.Stage.COUNT
         self.redraw()
 
     def select_prev(self):
-        self.selected = (self.selected - 1) % course.Stage.COUNT
+        self.course.selected_stage = (self.game.selected_stage - 1) % course.Stage.COUNT
         self.redraw()
 
 
@@ -112,10 +112,10 @@ class Robot:
             course.Stage.FIELD: Robot.field,
         }
 
-    def start_stage(self, Stage):
+    def start_stage(self):
         ev3.screen.clear()
         ev3.screen.print("Stage started")
-        self.stage_fns[Stage](self)
+        self.stage_fns[self.course.selected_stage](self)
 
     def log(self, msg=""):
         ev3.screen.print(msg)
@@ -219,5 +219,5 @@ menu = Menu(course)
 while True:
     menu.update()
     if course.running:
-        robot.start_stage(menu.selected)
+        robot.start_stage()
         #menu.select_next()
