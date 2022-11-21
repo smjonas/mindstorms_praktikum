@@ -13,12 +13,12 @@ class Robot:
     def __init__(self, course):
         self.course = course
 
-        left_motor = Motor(Port.A)
-        right_motor = Motor(Port.D)
+        self.left_motor = Motor(Port.A)
+        self.right_motor = Motor(Port.D)
         # Since we used tracks, axle_track cannot be measured in a sensible way
         # We set it to the value where it does a 90 degree turn on the parcour floor if we tell it to (other angles do not work therefore).
         self.robot = DriveBase(
-            left_motor=left_motor, right_motor=right_motor, wheel_diameter=56, axle_track=166.5
+            left_motor=self.left_motor, right_motor=self.right_motor, wheel_diameter=56, axle_track=166.5
         )
 
         self.color_sensor = ColorSensor(Port.S2)
@@ -41,28 +41,33 @@ class Robot:
 
     def check_blueline(self):
         r, g, b = self.color_sensor.rgb()
-        #TODO remove debug loop
+        #TODO remove debug loop and constant return value
         #while True:
         #    r, g, b = self.color_sensor.rgb()
         #    self.log(str(r) + " " + str(g) + " " + str(b))
         #    wait(100)
-        return b >= 25 and r < 25 and g < 25
+        #return b >= 25 and r < 25 and g < 25
+        return False
 
     # Stage 1: Following a white line with gaps and an obstacle
     def lines(self):
-        LIGHT, DARK, K = 66, 13, 1.2
+        LIGHT, DARK, K = 66, 18, 0.5
         mid = (LIGHT + DARK) / 2
 
         obstacle_distance = 100
 
-        start_angle = 0
+        start_value = 0
         search_angle = 2
         gap_threshold_angle = 84 # depends on search_angle
         gap_turnback_angle = 120
 
+        flag_tr = False
+        flag_tbl = False
+        flag_cg = False
+
         self.log("Following line")
         while not self.course.should_abort():
-            self.log(str(self.us_sensor.distance())) #TODO remove debug log
+            #self.log(str(self.us_sensor.distance())) #TODO remove debug log
             if self.check_blueline():
                 self.robot.stop()
                 self.log("Reached end of line")
@@ -73,40 +78,70 @@ class Robot:
                 self.log("Obstacle found, circumnavigating...")
                 continue
             
+            if flag_tbl:
+                if self.robot.angle() - start_value > gap_turnback_angle:
+                    flag_tbl = False
+                    flag_cg = True
+                    start_value = self.robot.distance()
+                    self.robot.drive(self.DRIVE_SPEED, 0)
+                    self.log("Crossing gap")
+                continue
+            
+            if flag_cg:
+                if self.robot.distance() - start_value > 80:
+                    flag_cg = False
+                    self.log("Following line")
+                continue
+
             #TODO Refactor nested while loop (program cannot be exited in there)
             brightness = self.color_sensor.reflection()
             if brightness <= DARK:
-                start_angle = self.robot.angle()
-                found_gap = False
-                while self.color_sensor.reflection() <= DARK:
-                    self.log("Turning right " + str(start_angle - self.robot.angle())) #TODO remove debug log
-                    self.robot.turn(-search_angle)
-                    if  start_angle - self.robot.angle() > gap_threshold_angle:
-                        found_gap = True
-                        break
-                if not found_gap:
-                    self.log("No gap") #TODO remove debug log
+                if flag_tr:
+                    self.log(str(start_value - self.robot.angle()))
+                    if start_value - self.robot.angle() > gap_threshold_angle:
+                        self.log("Found gap, crossing...")
+                        self.log("Turning back")
+                        flag_tr = False
+                        flag_tbl = True
+                        start_value = self.robot.angle()
+                        self.robot.drive(0, 30)
                     continue
+                flag_tr = True
+                start_value = self.robot.angle()
+                self.robot.drive(0, -15)
+                continue
+
+                # while self.color_sensor.reflection() <= DARK:
+                #     self.log("Turning right " + str(start_value - self.robot.angle())) #TODO remove debug log
+                #     self.robot.turn(-search_angle)
+                #     if  start_value - self.robot.angle() > gap_threshold_angle:
+                #         found_gap = True
+                #         break
+                # if not found_gap:
+                #     self.log("No gap") #TODO remove debug log
+                #     continue
                 
-                self.log("Found gap, crossing...")
-                self.log("Turning back") #TODO remove debug log
-                self.robot.turn(gap_turnback_angle)
-                self.log("Crossing gap") #TODO remove debug log
-                self.robot.drive(self.DRIVE_SPEED, 0)
-                # Drive forward for 3s
-                wait(3000)
-                self.log("Following line")
+                # self.log("Found gap, crossing...")
+                # self.log("Turning back") #TODO remove debug log
+                # self.robot.turn(gap_turnback_angle)
+                # self.log("Crossing gap") #TODO remove debug log
+                # self.robot.drive(self.DRIVE_SPEED, 0)
+                # # Drive forward for 3s
+                # wait(3000)
+                # self.log("Following line")
 
             elif brightness >= LIGHT:
+                flag_tr = False
                 self.log("Turning left") #TODO remove debug log
-                self.robot.turn(search_angle)
+                self.robot.drive(0, 15) # multiple drive operations can ovverride each other and are non-blocking -> robot does not jitter
 
             else:
+                flag_tr = False
                 delta = brightness - mid
                 turn_rate = K * delta
                 self.log("Driving") #TODO remove debug log
                 self.robot.drive(self.DRIVE_SPEED, turn_rate)
-                wait(10)
+            wait(5)
 
     # Stage 2: Push a block in the corner
     def obstacle(self):
