@@ -38,19 +38,19 @@ class Menu:
     def redraw(self):
         ev3.screen.clear()
         # A few magic numbers here to make the menu look good
-        for i in range(len(self.course.Stage)):
-            ev3.screen.draw_text(3, i * (Menu.SCREEN_HEIGHT / len(self.course.Stage)), self.course.Stage.to_string(i))
+        for i in range(Course.Stage.COUNT):
+            ev3.screen.draw_text(3, i * (Menu.SCREEN_HEIGHT / Course.Stage.COUNT), self.course.Stage.to_string(i))
         ev3.screen.draw_box(
             1,
-            self.course.selected_stage * (Menu.SCREEN_HEIGHT / len(self.course.Stage)),
+            self.course.selected_stage * (Menu.SCREEN_HEIGHT / Course.Stage.COUNT),
             Menu.SCREEN_WIDTH - 1,
-            (self.course.selected_stage + 1) * (Menu.SCREEN_HEIGHT / len(self.course.Stage)) - 8,
+            (self.course.selected_stage + 1) * (Menu.SCREEN_HEIGHT / Course.Stage.COUNT) - 8,
         )
 
     def select_next(self):
-        self.course.selected_stage = (self.game.selected_stage + 1) % len(self.course.Stage)
+        self.course.selected_stage = (self.course.selected_stage + 1) % Course.Stage.COUNT
         self.redraw()
 
     def select_prev(self):
-        self.course.selected_stage = (self.game.selected_stage - 1) % len(self.course.Stage)
+        self.course.selected_stage = (self.course.selected_stage - 1) % Course.Stage.COUNT
         self.redraw()

@@ -3,9 +3,6 @@ from course import Course
 from menu import Menu
 from robot import Robot
 
-import math
-from enum import Enum
-
 from pybricks.hubs import EV3Brick
 
 

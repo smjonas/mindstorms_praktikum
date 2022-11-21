@@ -1,6 +1,3 @@
-from course import Course
-
-
 from pybricks.ev3devices import (ColorSensor, Motor, TouchSensor, UltrasonicSensor)
 from pybricks.parameters import Button, Color, Direction, Port, Stop
 from pybricks.robotics import DriveBase

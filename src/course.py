@@ -1,5 +1,3 @@
-from enum import Enum
-
 from pybricks.hubs import EV3Brick
 from pybricks.parameters import Button
 ev3 = EV3Brick()
@@ -16,16 +14,14 @@ class Course:
             self.running = False
         return abort
     
-    class Stage(Enum):
-        LINE = 0
-        OBSTACLE = 1
-        BRIDGE = 2
-        FIELD = 3
+    class Stage:
+        COUNT = 4
+        LINE, OBSTACLE, BRIDGE, FIELD = range(COUNT)
 
-        def to_string(Stage):
+        def to_string(stage):
             return {
-                Stage.LINE: "Follow lines",
-                Stage.OBSTACLE: "Move obstacle",
-                Stage.BRIDGE: "Cross bridge",
-                Stage.FIELD: "Color field",
-            }[Stage]
+                Course.Stage.LINE: "Follow lines",
+                Course.Stage.OBSTACLE: "Move obstacle",
+                Course.Stage.BRIDGE: "Cross bridge",
+                Course.Stage.FIELD: "Color field",
+            }[stage]
