@@ -1,11 +1,14 @@
-from pybricks.ev3devices import (ColorSensor, Motor, TouchSensor, UltrasonicSensor)
+from pybricks.ev3devices import (ColorSensor, Motor, TouchSensor,
+                                 UltrasonicSensor)
+from pybricks.hubs import EV3Brick
 from pybricks.parameters import Button, Color, Direction, Port, Stop
 from pybricks.robotics import DriveBase
 from pybricks.tools import wait
 
-from pybricks.hubs import EV3Brick
+from state import s, t
 
 ev3 = EV3Brick()
+
 
 class Robot:
     DRIVE_SPEED = 50
@@ -41,12 +44,12 @@ class Robot:
 
     def check_blueline(self):
         r, g, b = self.color_sensor.rgb()
-        #TODO remove debug loop and constant return value
-        #while True:
+        # TODO remove debug loop and constant return value
+        # while True:
         #    r, g, b = self.color_sensor.rgb()
         #    self.log(str(r) + " " + str(g) + " " + str(b))
         #    wait(100)
-        #return b >= 25 and r < 25 and g < 25
+        # return b >= 25 and r < 25 and g < 25
         return False
 
     # Stage 1: Following a white line with gaps and an obstacle
@@ -56,18 +59,43 @@ class Robot:
 
         obstacle_distance = 100
 
-        start_value = 0
-        search_angle = 2
-        gap_threshold_angle = 84 # depends on search_angle
+        def is_dark():
+            return self.color_sensor.reflection() <= DARK
+
+        def is_light():
+            return self.color_sensor.reflection() >= LIGHT
+
+        def is_gray():
+            return self.color_sensor.reflection() > DARK and self.color_sensor.reflection() < LIGHT
+
+        self.start_value = 0
+        gap_threshold_angle = 84  # depends on search_angle
         gap_turnback_angle = 120
+
+        def reset_start_value():
+            self.start_value = 0
 
         flag_tr = False
         flag_tbl = False
         flag_cg = False
+        states = {
+            "z0": s([t(is_dark), "z4"], lambda: wait(10)),
+            "z4": s([t(lambda: True, "z2")], reset_start_value),
+            "z2": s([t(lambda: True, "z0")], lambda: self.robot.drive(0, -15))
+        }
+        cur_state = states["z0"]
+
+        while not self.course.should_abort():
+            successor = cur_state.check_conditions()
+            if successor is not None:
+                cur_state = states[successor]
+                if cur_state.on_enter is not None:
+                    cur_state.on_enter()
+                print("set state to", successor)
 
         self.log("Following line")
         while not self.course.should_abort():
-            #self.log(str(self.us_sensor.distance())) #TODO remove debug log
+            # self.log(str(self.us_sensor.distance())) #TODO remove debug log
             if self.check_blueline():
                 self.robot.stop()
                 self.log("Reached end of line")
@@ -77,7 +105,7 @@ class Robot:
                 self.robot.stop()
                 self.log("Obstacle found, circumnavigating...")
                 continue
-            
+
             if flag_tbl:
                 if self.robot.angle() - start_value > gap_turnback_angle:
                     flag_tbl = False
@@ -86,14 +114,14 @@ class Robot:
                     self.robot.drive(self.DRIVE_SPEED, 0)
                     self.log("Crossing gap")
                 continue
-            
+
             if flag_cg:
                 if self.robot.distance() - start_value > 80:
                     flag_cg = False
                     self.log("Following line")
                 continue
 
-            #TODO Refactor nested while loop (program cannot be exited in there)
+            # TODO Refactor nested while loop (program cannot be exited in there)
             brightness = self.color_sensor.reflection()
             if brightness <= DARK:
                 if flag_tr:
@@ -120,7 +148,7 @@ class Robot:
                 # if not found_gap:
                 #     self.log("No gap") #TODO remove debug log
                 #     continue
-                
+
                 # self.log("Found gap, crossing...")
                 # self.log("Turning back") #TODO remove debug log
                 # self.robot.turn(gap_turnback_angle)
@@ -132,14 +160,16 @@ class Robot:
 
             elif brightness >= LIGHT:
                 flag_tr = False
-                self.log("Turning left") #TODO remove debug log
-                self.robot.drive(0, 15) # multiple drive operations can ovverride each other and are non-blocking -> robot does not jitter
+                self.log("Turning left")  # TODO remove debug log
+                self.robot.drive(
+                    0, 15
+                )  # multiple drive operations can ovverride each other and are non-blocking -> robot does not jitter
 
             else:
                 flag_tr = False
                 delta = brightness - mid
                 turn_rate = K * delta
-                self.log("Driving") #TODO remove debug log
+                self.log("Driving")  # TODO remove debug log
                 self.robot.drive(self.DRIVE_SPEED, turn_rate)
             wait(5)
 
