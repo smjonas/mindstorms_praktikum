@@ -33,3 +33,5 @@ Gruppenmitglieder: Lukas Baldner, Jonas Strittmatter, Julian Shen
 - Anpassung der Parameter für DriveBase, das Fehler beim Winkelmessen beobachtet wurde
 - Konfigurieren weiterer Parameter wie Drehwinkel und Fahrzeit bis er das Linienfolgen erfolgreich schafft
 - Roboter erkennt blaue Linien und wechselt automatisch in die nächste Routine, und hält nach der letzten Rotuine an
+
+multiple files, wait in update?, nested loop für lücke umschreiben, Funktion zum passiven drehen, hindernis
