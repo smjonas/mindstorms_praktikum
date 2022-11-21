@@ -6,6 +6,7 @@ from pybricks.parameters import Button, Color, Direction, Port, Stop
 from pybricks.robotics import DriveBase
 from pybricks.tools import wait
 
+from pybricks.hubs import EV3Brick
 
 ev3 = EV3Brick()
 
