@@ -31,9 +31,6 @@ class Menu:
             self.last_pressed = Button.DOWN
         elif Button.CENTER in pressed_buttons:
             self.course.running = True
-        #TODO decide what to do
-        # Probably not needed anymore because of last_pressed-query
-        # wait(100)
 
     def redraw(self):
         ev3.screen.clear()
