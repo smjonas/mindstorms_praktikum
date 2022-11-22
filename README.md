@@ -34,4 +34,9 @@ Gruppenmitglieder: Lukas Baldner, Jonas Strittmatter, Julian Shen
 - Konfigurieren weiterer Parameter wie Drehwinkel und Fahrzeit bis er das Linienfolgen erfolgreich schafft
 - Roboter erkennt blaue Linien und wechselt automatisch in die nächste Routine, und hält nach der letzten Rotuine an
 
-nested loop für lücke umschreiben, Funktion zum passiven drehen, hindernis
+### 21.11.22
+- Aufteilung des Programms in mehrere Dateien
+- Ändern des vorher noch blockierenden Drehens in ein nicht-blockierendes Drehen
+- Einführung von Flags, die Zustandswechsel während dem Fahren/Drehen ermöglichen
+- Zustandsautomaten neu zeichnen, da Programmstruktur verändert wurde
+- Integration des State-Method-Entwurfsmusters, um den Zustandsautomaten im Code umzuseten
