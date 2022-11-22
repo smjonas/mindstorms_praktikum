@@ -66,7 +66,8 @@ class Robot:
             return self.color_sensor.reflection() >= LIGHT
 
         def is_gray():
-            return self.color_sensor.reflection() > DARK and self.color_sensor.reflection() < LIGHT
+            reflection = self.color_sensor.reflection()
+            return reflection > DARK and reflection < LIGHT
 
         self.start_value = 0
         gap_threshold_angle = 84  # depends on search_angle
@@ -79,7 +80,7 @@ class Robot:
         flag_tbl = False
         flag_cg = False
         states = {
-            "z0": s([t(is_dark), "z4"], lambda: wait(10)),
+            "z0": s([t(is_dark, "z4")], lambda: wait(10)),
             "z4": s([t(lambda: True, "z2")], reset_start_value),
             "z2": s([t(lambda: True, "z0")], lambda: self.robot.drive(0, -15))
         }
@@ -87,9 +88,9 @@ class Robot:
 
         while not self.course.should_abort():
             successor = cur_state.check_conditions()
-            if successor is not None:
+            if not successor:
                 cur_state = states[successor]
-                if cur_state.on_enter is not None:
+                if cur_state.on_enter:
                     cur_state.on_enter()
                 print("set state to", successor)
 

@@ -39,4 +39,4 @@ Gruppenmitglieder: Lukas Baldner, Jonas Strittmatter, Julian Shen
 - Ändern des vorher noch blockierenden Drehens in ein nicht-blockierendes Drehen
 - Einführung von Flags, die Zustandswechsel während dem Fahren/Drehen ermöglichen
 - Zustandsautomaten neu zeichnen, da Programmstruktur verändert wurde
-- Integration des State-Method-Entwurfsmusters, um den Zustandsautomaten im Code umzuseten
+- Wechsel zu State-Method-Entwurfsmuster, um den Zustandsautomaten im Code umzusetzen und leichtere Erweiterbarkeit zu erreichen
