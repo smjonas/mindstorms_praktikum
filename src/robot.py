@@ -25,7 +25,7 @@ class Robot:
         )
 
         self.color_sensor = ColorSensor(Port.S2)
-        self.us_sensor = UltrasonicSensor(Port.S4)
+        self.dist_sensor = UltrasonicSensor(Port.S4)
 
         self.stage_fns = {
             course.Stage.LINE: Robot.lines,
@@ -56,6 +56,7 @@ class Robot:
     def lines(self):
         LIGHT, DARK, K = 66, 18, 0.5
         mid = (LIGHT + DARK) / 2
+        NEXT_LEVEL, OBSTACLE = 1, 2
 
         obstacle_distance = 100
 
@@ -66,23 +67,62 @@ class Robot:
             return self.color_sensor.reflection() >= LIGHT
 
         def is_gray():
-            reflection = self.color_sensor.reflection()
-            return reflection > DARK and reflection < LIGHT
+            brightness = self.color_sensor.reflection()
+            return brightness > DARK and brightness < LIGHT
 
         self.start_value = 0
         gap_threshold_angle = 84  # depends on search_angle
         gap_turnback_angle = 120
 
-        def reset_start_value():
-            self.start_value = 0
+        def store_state():
+            self.prev_state = self.robot.state()
+
+        def drive_right():
+            self.robot.drive(0, -15)
+            wait(10)
+
+        # Lots of currying :D
+        def did_turn(degrees):
+            def did_turn_degrees():
+                delta = self.robot.angle() - self.prev_state.angle
+                return delta >= degrees if degrees > 0 else delta <= degrees
+            return did_turn_degrees
+
+        def did_drive(distance_in_mm):
+            def did_drive_distance():
+                delta = self.robot.distance() - self.prev_state.distance
+                return delta >= distance_in_mm
+            return did_drive_distance
+
+        def check_events(transitions, on_enter=None):
+            new_transitions = [
+                (self.check_blueline, NEXT_LEVEL),
+                (lambda: self.dist_sensor.distance() < obstacle_distance, OBSTACLE),
+            ]
+            return s(new_transitions + transitions, on_enter)
+
+        def drive_regulated():
+            brightness = self.color_sensor.reflection()
+            delta = brightness - mid
+            turn_rate = K * delta
+            self.robot.drive(self.DRIVE_SPEED, turn_rate)
 
         flag_tr = False
         flag_tbl = False
         flag_cg = False
         states = {
-            "z0": s([t(is_dark, "z4")], lambda: wait(10)),
-            "z4": s([t(lambda: True, "z2")], reset_start_value),
-            "z2": s([t(lambda: True, "z0")], lambda: self.robot.drive(0, -15))
+            "start": check_events(
+                [(is_gray, "drive_regulated"), (is_dark, "store_prev_angle"), (is_light, "turn_left")],
+                lambda: wait(10),
+            ),
+            "turn_left": s([(is_gray, "drive_regulated")]),
+            "drive_regulated": check_events(
+                [(is_dark, "store_and_drive_right"), (True, "turn_left")], drive_regulated
+            ),
+            "store_and_turn_right": s([(True, "turn_right")], store_state),
+            "turn_right": s([(is_gray, "drive_regulated"), (did_turn(90), "turn_back_left")], drive_right),
+            "turn_back_left": s([(did_turn(-90), "drive_straight")], store_state),
+            "drive_straight": check_events([(did_drive(100), "start")], store_state),
         }
         cur_state = states["z0"]
 
@@ -90,6 +130,16 @@ class Robot:
             successor = cur_state.check_conditions()
             if not successor:
                 cur_state = states[successor]
+                if cur_state == NEXT_LEVEL:
+                    self.robot.stop()
+                    self.course.running = False
+                    self.log("Reached end of line")
+                    return
+                elif cur_state == OBSTACLE:
+                    self.robot.stop()
+                    self.log("Obstacle found, circumnavigating...")
+                    continue
+
                 if cur_state.on_enter:
                     cur_state.on_enter()
                 print("set state to", successor)
@@ -102,7 +152,7 @@ class Robot:
                 self.log("Reached end of line")
                 self.course.running = False
                 return
-            if self.us_sensor.distance() < obstacle_distance:
+            if self.dist_sensor.distance() < obstacle_distance:
                 self.robot.stop()
                 self.log("Obstacle found, circumnavigating...")
                 continue
