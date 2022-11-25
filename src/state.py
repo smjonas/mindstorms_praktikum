@@ -6,7 +6,7 @@ class State:
     def check_conditions(self):
         for t in self.transitions:
             transition = {"condition": t[0], "successor": t[1]}
-            if (type(transition.condition) == "boolean" and transition.condition) or transition.condition():
+            if transition.condition is True or transition.condition():
                 return transition.successor
         return None
 
