@@ -58,6 +58,10 @@ class Robot:
         mid = (LIGHT + DARK) / 2
         NEXT_LEVEL, OBSTACLE = 1, 2
 
+        # depends on search_angle
+        GAP_THRESHOLD_ANGLE = 84
+        GAP_TURNBACK_ANGLE = 120
+
         obstacle_distance = 100
 
         def is_dark():
@@ -71,27 +75,30 @@ class Robot:
             return brightness > DARK and brightness < LIGHT
 
         self.start_value = 0
-        gap_threshold_angle = 84  # depends on search_angle
-        gap_turnback_angle = 120
 
         def store_state():
             self.prev_state = self.robot.state()
 
-        def drive_right():
-            self.robot.drive(0, -15)
-            wait(10)
+        def turn(angle):
+            def turn_angle():
+                self.robot.drive(0, angle)
+                wait(10)
+
+            return turn_angle
 
         # Lots of currying :D
         def did_turn(degrees):
             def did_turn_degrees():
                 delta = self.robot.angle() - self.prev_state.angle
                 return delta >= degrees if degrees > 0 else delta <= degrees
+
             return did_turn_degrees
 
         def did_drive(distance_in_mm):
             def did_drive_distance():
                 delta = self.robot.distance() - self.prev_state.distance
                 return delta >= distance_in_mm
+
             return did_drive_distance
 
         def check_events(transitions, on_enter=None):
@@ -106,25 +113,34 @@ class Robot:
             delta = brightness - mid
             turn_rate = K * delta
             self.robot.drive(self.DRIVE_SPEED, turn_rate)
+            wait(10)
+
+        def drive_straight():
+            self.robot.drive(self.DRIVE_SPEED, 0)
 
         flag_tr = False
         flag_tbl = False
         flag_cg = False
         states = {
             "start": check_events(
-                [(is_gray, "drive_regulated"), (is_dark, "store_prev_angle"), (is_light, "turn_left")],
+                [(is_gray, "drive_regulated"), (is_dark, "store_and_turn_right"), (is_light, "turn_left")],
                 lambda: wait(10),
             ),
-            "turn_left": s([(is_gray, "drive_regulated")]),
+            "turn_left": s([(is_gray, "drive_regulated")], turn(15)),
             "drive_regulated": check_events(
                 [(is_dark, "store_and_drive_right"), (True, "turn_left")], drive_regulated
             ),
             "store_and_turn_right": s([(True, "turn_right")], store_state),
-            "turn_right": s([(is_gray, "drive_regulated"), (did_turn(90), "turn_back_left")], drive_right),
-            "turn_back_left": s([(did_turn(-90), "drive_straight")], store_state),
-            "drive_straight": check_events([(did_drive(100), "start")], store_state),
+            "turn_right": s(
+                [(is_gray, "drive_regulated"), (did_turn(GAP_THRESHOLD_ANGLE), "store_and_turn_back_left")],
+                turn(-15),
+            ),
+            "store_and_turn_back_left": s([(True, "turn_back_left")], store_state),
+            "turn_back_left": s([(did_turn(GAP_TURNBACK_ANGLE), "store_and_drive_straight")], turn(-15)),
+            "store_and_drive_straight": check_events([(True, "drive_straight")], store_state),
+            "drive_straight": check_events([(did_drive(100), "start")], drive_straight),
         }
-        cur_state = states["z0"]
+        cur_state = states["start"]
 
         while not self.course.should_abort():
             successor = cur_state.check_conditions()
@@ -158,7 +174,7 @@ class Robot:
                 continue
 
             if flag_tbl:
-                if self.robot.angle() - start_value > gap_turnback_angle:
+                if self.robot.angle() - start_value > GAP_TURNBACK_ANGLE:
                     flag_tbl = False
                     flag_cg = True
                     start_value = self.robot.distance()
@@ -177,7 +193,7 @@ class Robot:
             if brightness <= DARK:
                 if flag_tr:
                     self.log(str(start_value - self.robot.angle()))
-                    if start_value - self.robot.angle() > gap_threshold_angle:
+                    if start_value - self.robot.angle() > GAP_THRESHOLD_ANGLE:
                         self.log("Found gap, crossing...")
                         self.log("Turning back")
                         flag_tr = False
