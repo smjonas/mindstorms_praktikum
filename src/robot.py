@@ -5,7 +5,7 @@ from pybricks.parameters import Button, Color, Direction, Port, Stop
 from pybricks.robotics import DriveBase
 from pybricks.tools import wait
 
-from state import s, t
+from state import s
 
 ev3 = EV3Brick()
 
@@ -56,13 +56,13 @@ class Robot:
     def lines(self):
         LIGHT, DARK, K = 66, 18, 0.5
         mid = (LIGHT + DARK) / 2
-        NEXT_LEVEL, OBSTACLE = 1, 2
 
         # depends on search_angle
         GAP_THRESHOLD_ANGLE = 84
         GAP_TURNBACK_ANGLE = 120
+        OBSTACLE_DISTANCE = 100
 
-        obstacle_distance = 100
+        NEXT_LEVEL_STATE, OBSTACLE_STATE = 1, 2
 
         def is_dark():
             return self.color_sensor.reflection() <= DARK
@@ -73,8 +73,6 @@ class Robot:
         def is_gray():
             brightness = self.color_sensor.reflection()
             return brightness > DARK and brightness < LIGHT
-
-        self.start_value = 0
 
         def store_state():
             self.prev_state = self.robot.state()
@@ -100,8 +98,8 @@ class Robot:
 
         def check_events(transitions, on_enter=None):
             new_transitions = [
-                (self.check_blueline, NEXT_LEVEL),
-                (lambda: self.dist_sensor.distance() < obstacle_distance, OBSTACLE),
+                (self.check_blueline, NEXT_LEVEL_STATE),
+                (lambda: self.dist_sensor.distance() < OBSTACLE_DISTANCE, OBSTACLE_STATE),
             ]
             return s(new_transitions + transitions, on_enter)
 
@@ -130,7 +128,7 @@ class Robot:
                 turn(-15),
             ),
             "store_and_turn_back_left": s([(True, "turn_back_left")], store_state),
-            "turn_back_left": s([(did_turn(GAP_TURNBACK_ANGLE), "store_and_drive_straight")], turn(-15)),
+            "turn_back_left": s([(did_turn(GAP_TURNBACK_ANGLE), "store_and_drive_straight")], turn(15)),
             "store_and_drive_straight": check_events([(True, "drive_straight")], store_state),
             "drive_straight": check_events([(did_drive(100), "start")], drive_straight),
         }
@@ -140,12 +138,12 @@ class Robot:
             successor = cur_state.check_conditions()
             if not successor:
                 cur_state = states[successor]
-                if cur_state == NEXT_LEVEL:
+                if cur_state == NEXT_LEVEL_STATE:
                     self.robot.stop()
                     self.course.running = False
                     self.log("Reached end of line")
                     return
-                elif cur_state == OBSTACLE:
+                elif cur_state == OBSTACLE_STATE:
                     self.robot.stop()
                     self.log("Obstacle found, circumnavigating...")
                     continue
