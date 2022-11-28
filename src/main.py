@@ -15,4 +15,4 @@ while True:
     menu.update()
     if course.running:
         robot.start_stage()
-        #menu.select_next()
+        menu.select_next()
