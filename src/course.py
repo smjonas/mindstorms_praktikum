@@ -13,7 +13,7 @@ class Course:
         if abort:
             self.running = False
         return abort
-    
+
     class Stage:
         COUNT = 4
         LINE, OBSTACLE, BRIDGE, FIELD = range(COUNT)

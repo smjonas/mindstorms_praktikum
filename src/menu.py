@@ -6,6 +6,7 @@ from pybricks.parameters import Button
 
 ev3 = EV3Brick()
 
+
 class Menu:
     SCREEN_WIDTH = ev3.screen.width
     SCREEN_HEIGHT = ev3.screen.height
