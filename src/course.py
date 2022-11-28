@@ -16,12 +16,12 @@ class Course:
 
     class Stage:
         COUNT = 4
-        LINE, OBSTACLE, BRIDGE, FIELD = range(COUNT)
+        LINE, DELIVERY, BRIDGE, FIELD = range(COUNT)
 
         def to_string(stage):
             return {
                 Course.Stage.LINE: "Follow lines",
-                Course.Stage.OBSTACLE: "Move obstacle",
+                Course.Stage.DELIVERY: "Deliver Package",
                 Course.Stage.BRIDGE: "Cross bridge",
                 Course.Stage.FIELD: "Color field",
             }[stage]
