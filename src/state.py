@@ -5,11 +5,7 @@ class State:
 
     def check_conditions(self):
         for t in self.transitions:
-            transition = {"condition": t[0], "successor": t[1]}
-            if transition.condition is True or transition.condition():
-                return transition.successor
+            condition, successor = t
+            if condition is True or condition():
+                return successor
         return None
-
-
-def s(*args):
-    return State(args)
