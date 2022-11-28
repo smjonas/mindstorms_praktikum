@@ -40,3 +40,12 @@ Gruppenmitglieder: Lukas Baldner, Jonas Strittmatter, Julian Shen
 - Einführung von Flags, die Zustandswechsel während dem Fahren/Drehen ermöglichen
 - Zustandsautomaten neu zeichnen, da Programmstruktur verändert wurde
 - Wechsel zu State-Method-Entwurfsmuster, um den Zustandsautomaten im Code umzusetzen und leichtere Erweiterbarkeit zu erreichen
+
+### 21.11.22 - 28.11.22
+- Alle Zustände für den Wechsel zum State-Method-Entwurfsmuster ergänzt und implementiert
+
+### 28.11.22
+- Bugs in den Zuständen behoben
+- Lichtsensor umgedreht, damit das Erkennen der blauen Linie funktioniert
+- Zustände zum Umfahren des Hindernisses implemen tiert
+- Code sauberer gemacht
