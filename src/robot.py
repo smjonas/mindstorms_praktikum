@@ -49,19 +49,19 @@ class Robot:
     # Methods for stages of course
     # Stage 1: Following a white line with gaps and an obstacle
     def lines(self):
-        LIGHT, DARK, K = 60, 18, 0.35
+        LIGHT, DARK, K = 60, 15, 0.01
         GRAY = (LIGHT + DARK) / 2
 
-        ON_LINE_TURN_RATE = 10
+        ON_LINE_TURN_RATE = 30
         ON_LINE_DRIVE_SPEED = 60
 
-        SET_ANGLE_TURN_RATE = 30
+        SET_ANGLE_TURN_RATE = 40
         SET_DISTANCE_DRIVE_SPEED = 100
 
-        GAP_TURNBACK_ANGLE = 120
+        GAP_TURNBACK_ANGLE = 105
         OBSTACLE_DISTANCE_THRESHOLD = 70
 
-        WAIT_TIME = 0
+        WAIT_TIME = 10
         ANGLE_FOR_90_DEGREES = 84
 
         NEXT_LEVEL_STATE, OBSTACLE_STATE = "next_level", "store_and_obst_1"
@@ -94,6 +94,9 @@ class Robot:
                 return delta >= distance_in_mm if distance_in_mm > 0 else delta <= distance_in_mm
             return did_drive_distance
 
+        def hit_rear():
+            return self.touch_sensor.pressed()
+
         # Nonblocking methods to tell the robot what to do
         def turn(angle):
             def turn_angle():
@@ -103,6 +106,9 @@ class Robot:
 
         def drive_regulated():
             brightness = self.color_sensor.reflection()
+            # if brightness <= 20:
+                # turn_rate = 50
+            # else:
             delta = brightness - GRAY
             turn_rate = K * delta
             self.robot.drive(ON_LINE_DRIVE_SPEED, turn_rate)
@@ -141,21 +147,21 @@ class Robot:
             "store_and_turn_back_left": State([(True, "turn_back_left")], store_state),
             "turn_back_left": State([(did_turn(GAP_TURNBACK_ANGLE), "store_and_drive_straight")], turn(SET_ANGLE_TURN_RATE)),
             "store_and_drive_straight": check_events([(True, "drive_straight")], store_state),
-            "drive_straight": check_events([(did_drive(100), "start")], drive_straight),
+            "drive_straight": check_events([(is_gray, "start"), (is_light, "start"), (did_drive(110), "start")], drive_straight),
             "store_and_obst_1": State([(True, "obst_1")], store_state),
             "obst_1": State([(did_turn(ANGLE_FOR_90_DEGREES), "obst_2")], turn(SET_ANGLE_TURN_RATE)),
-            "obst_2": State([(did_drive(175), "store_and_obst_3")], drive_straight),
+            "obst_2": State([(did_drive(172), "store_and_obst_3")], drive_straight),
             "store_and_obst_3": State([(True, "obst_3")], store_state),
             # Not just angle for 90 degrees to make sure we do not crash into the obstacle
             "obst_3": State([(did_turn(-ANGLE_FOR_90_DEGREES + 4), "obst_4")], turn(-SET_ANGLE_TURN_RATE)),
-            "obst_4": State([(did_drive(400), "store_and_obst_5")], drive_straight),
+            "obst_4": State([(did_drive(500), "store_and_obst_5")], drive_straight),
             "store_and_obst_5": State([(True, "obst_5")], store_state),
             "obst_5": State([(did_turn(-ANGLE_FOR_90_DEGREES), "obst_6")], turn(-SET_ANGLE_TURN_RATE)),
-            "obst_6": State([(did_drive(140), "store_and_obst_7")], drive_straight),
+            "obst_6": State([(did_drive(150), "store_and_obst_7")], drive_straight),
             "store_and_obst_7": State([(True, "obst_7")], store_state),
             "obst_7": State([(did_turn(ANGLE_FOR_90_DEGREES), "obst_8")], turn(SET_ANGLE_TURN_RATE)),
             # TODO: Decide if we want to drive back, maybe change value in obst_6 to be closer to the line
-            "obst_8": State([(did_drive(-50), "start")], drive_back)
+            "obst_8": State([(hit_rear, "start"), (True, "obst_8")], drive_back)
         }
         cur_state = states["start"]
 
