@@ -49,3 +49,10 @@ Gruppenmitglieder: Lukas Baldner, Jonas Strittmatter, Julian Shen
 - Lichtsensor umgedreht, damit das Erkennen der blauen Linie funktioniert
 - Zustände zum Umfahren des Hindernisses implemen tiert
 - Code sauberer gemacht
+
+### 05.12.2022
+- Roboter erkennt in der Lücken-Routine nach dem Zurückdrehen die weiße Linie
+- Anpassen der Parameter, wie DRIVE_SPEED, TURN_RATE..., sodass das Linienfolgen deutlich flüssiger funktioniert
+- Nutzen des Touchsensors bei dem Rückwärtsfahren beim Obstacle
+- Code für Farbfeldsuche angefangen: Zustände für das Fahren erstellt
+- TODO: Rückwärtsfahren zum Ausrichten, Farben erkennen, Farbsensor korrekt drehen
