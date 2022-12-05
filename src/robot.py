@@ -1,7 +1,7 @@
 from pybricks.ev3devices import (ColorSensor, Motor, TouchSensor,
                                  UltrasonicSensor)
 from pybricks.hubs import EV3Brick
-from pybricks.parameters import Port
+from pybricks.parameters import Port, Stop
 from pybricks.robotics import DriveBase
 from pybricks.tools import wait
 
@@ -22,6 +22,7 @@ class Robot:
         self.robot = DriveBase(
             left_motor=self.left_motor, right_motor=self.right_motor, wheel_diameter=56, axle_track=166.5
         )
+        self.color_sensor_motor = Motor(Port.B)
 
         self.color_sensor = ColorSensor(Port.S2)
         self.dist_sensor = UltrasonicSensor(Port.S4)
@@ -39,7 +40,7 @@ class Robot:
 
     def start_stage(self):
         ev3.screen.clear()
-        self.log("Stage " + str(self.course.selected_stage) + " started")
+        self.log("Stage " + str(self.course.selected_stage + 1) + " started")
         self.stage_fns[self.course.selected_stage](self)
 
     def check_blueline(self):
@@ -98,9 +99,9 @@ class Robot:
             return self.touch_sensor.pressed()
 
         # Nonblocking methods to tell the robot what to do
-        def turn(angle):
+        def turn(turn_rate):
             def turn_angle():
-                self.robot.drive(0, angle)
+                self.robot.drive(0, turn_rate)
                 wait(WAIT_TIME)
             return turn_angle
 
@@ -198,8 +199,88 @@ class Robot:
 
     # Stage 4: Find a red and white patch of color on the floor
     def field(self):
+        DRIVE_SPEED = 180
+        ANGLE_FOR_90_DEGREES = 84
+        TURN_RATE = 70
+        SHORT_DRIVE_DISTANCE = 140
+        OBSTACLE_DISTANCE_THRESHOLD = 100
+        WAIT_TIME = 10
+
+        MOTOR_SPEED = 30
+        MOTOR_MIN_ANGLE, MOTOR_MAX_ANGLE = -70, 30
+        motor_target = MOTOR_MIN_ANGLE
+
+        def swerve_color_sensor(motor_target):
+            angle = self.color_sensor_motor.angle()
+            if motor_target == MOTOR_MIN_ANGLE and angle <= MOTOR_MIN_ANGLE:
+                motor_target = MOTOR_MAX_ANGLE
+            elif angle <= MOTOR_MIN_ANGLE:
+                motor_target = MOTOR_MIN_ANGLE
+
+            self.color_sensor_motor.run_angle(MOTOR_SPEED, motor_target)
+            self.log(str(self.color_sensor_motor.angle()))
+
+
+        # Nonblocking methods to tell the robot what to do
+        def turn(turn_rate):
+            def turn_angle():
+                self.robot.drive(0, turn_rate)
+                wait(WAIT_TIME)
+            return turn_angle
+
+        def drive_straight():
+            self.robot.drive(DRIVE_SPEED, 0)
+            wait(WAIT_TIME)
+
+        # Save information to check difference in future states
+        def store_state():
+            self.prev_state = self.robot.state()
+
+        # Check differences in state
+        def did_turn(degrees):
+            def did_turn_degrees():
+                delta = self.robot.angle() - self.prev_state[2]
+                return delta >= degrees if degrees > 0 else delta <= degrees
+            return did_turn_degrees
+
+        def did_drive(distance_in_mm):
+            def did_drive_distance():
+                delta = self.robot.distance() - self.prev_state[0]
+                return delta >= distance_in_mm if distance_in_mm > 0 else delta <= distance_in_mm
+            return did_drive_distance
+
+        def wall_detected():
+            return self.dist_sensor.distance() < OBSTACLE_DISTANCE_THRESHOLD
+
+        states = {
+            "start'": State([(True, "start")], store_state),
+            "start": State([(did_turn(ANGLE_FOR_90_DEGREES), "check_wall_before_right")], turn(TURN_RATE)),
+            "check_wall_before_right": State([(wall_detected, "stop_and_turn_right'")], drive_straight),
+            "stop_and_turn_right'": State([(True, "stop_and_turn_right")], store_state),
+            "stop_and_turn_right": State([(did_turn(-ANGLE_FOR_90_DEGREES), "drive_before_right'")], turn(-TURN_RATE)),
+            "drive_before_right'": State([(True, "drive_before_right")], store_state),
+            "drive_before_right": State([(did_drive(SHORT_DRIVE_DISTANCE), "turn_right_before_drive'")], drive_straight),
+            "turn_right_before_drive'": State([(True, "turn_right_before_drive")], store_state),
+            "turn_right_before_drive": State([(did_turn(-ANGLE_FOR_90_DEGREES), "check_wall_before_left'")], turn(-TURN_RATE)),
+            "check_wall_before_left'": State([(True, "check_wall_before_left")], store_state),
+            "check_wall_before_left": State([(wall_detected, "stop_and_turn_left'")], drive_straight),
+            "stop_and_turn_left'": State([(True, "stop_and_turn_left")], store_state),
+            "stop_and_turn_left": State([(did_turn(ANGLE_FOR_90_DEGREES), "drive_before_left'")], turn(TURN_RATE)),
+            "drive_before_left'": State([(True, "drive_before_left")], store_state),
+            "drive_before_left": State([(did_drive(SHORT_DRIVE_DISTANCE), "start'")], drive_straight)
+        }
+        cur_state = states["start'"]
+
+        self.color_sensor_motor.run_angle(MOTOR_MAX_ANGLE, MOTOR_SPEED, Stop.HOLD, False)
+        store_state()
+        # Actual loop for this stage
         while not self.course.should_abort():
-            if self.check_blueline():
-                self.robot.stop()
-                self.course.running = False
-                return
+            swerve_color_sensor(motor_target)
+            successor = cur_state.check_conditions()
+            if successor:
+                print("CUR STATE ", successor)
+                cur_state = states.get(successor, successor)
+                if cur_state.on_enter:
+                    cur_state.on_enter()
+        self.robot.stop()
+
