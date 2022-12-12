@@ -218,6 +218,7 @@ class Robot:
         MOTOR_MIN_ANGLE, MOTOR_MAX_ANGLE = 0, 90
         self.motor_target = MOTOR_MAX_ANGLE
         self.color_sensor_motor.run(SWERVE_SPEED)
+        found_red, found_white = False, False
 
         def swerve_color_sensor():
             angle = self.color_sensor_motor.angle()
@@ -231,6 +232,17 @@ class Robot:
                 self.color_sensor_motor.run(-SWERVE_SPEED)
 
             self.log(str(self.color_sensor_motor.angle()))
+
+        def check_colors():
+            r, g, b = self.color_sensor.rgb()
+            red = r > 20 and g < 15 and b < 10
+            white = r > 40 and g > 60 and b > 50
+            if red:
+                found_red = True
+                ev3.speaker.beep(frequency=100, duration=1000)
+            elif white:
+                found_white = True
+                ev3.speaker.beep(frequency=500, duration=1000)
 
         # Nonblocking methods to tell the robot what to do
         def turn(turn_rate):
@@ -293,6 +305,10 @@ class Robot:
         # Actual loop for this stage
         while not self.course.should_abort():
             swerve_color_sensor()
+            check_colors()
+            if found_red and found_white:
+                self.course.running = False
+                break
             successor = cur_state.check_conditions()
             if successor:
                 print("CUR STATE ", successor)
