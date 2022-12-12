@@ -56,3 +56,11 @@ Gruppenmitglieder: Lukas Baldner, Jonas Strittmatter, Julian Shen
 - Nutzen des Touchsensors bei dem Rückwärtsfahren beim Obstacle
 - Code für Farbfeldsuche angefangen: Zustände für das Fahren erstellt
 - TODO: Rückwärtsfahren zum Ausrichten, Farben erkennen, Farbsensor korrekt drehen
+
+### 12.12.2022
+- Motor für Farbsensor umgebaut, um das Spiel des Arms zu reduzieren
+- Farbsensorarm schwenkt jetzt
+- Roboter erkennt rot und weiß
+- Rückwärtsfahren zum Ausrichten
+- Da Farbsensor eher links am Roboter, Routine beim Absuchen des Feldes angepasst
+- Geschwindigkeit des Roboters im Feld reduziert, um mit dem Arm den Boden genau genug absuchen zu können
