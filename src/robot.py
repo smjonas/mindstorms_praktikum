@@ -193,11 +193,9 @@ class Robot:
     # Stage 2: Push a block in the corner
     def delivery(self):
         while not self.course.should_abort():
-            r, g, b = self.color_sensor.rgb()
-            self.log("r: " + str(r) + ", g: " + str(g) + ", b: " + str(b))
-#            if self.check_blueline():
-#                self.robot.stop()
-#                return
+            if self.check_blueline():
+                self.robot.stop()
+                return
 
     # Stage 3: Cross a bridge with perpendicular ramps leading up/down at the ends
     def bridge(self):
@@ -208,13 +206,14 @@ class Robot:
 
     # Stage 4: Find a red and white patch of color on the floor
     def field(self):
-        DRIVE_SPEED = 180
+        DRIVE_SPEED = 90
         ANGLE_FOR_90_DEGREES = 84
         TURN_RATE = 70
         SHORT_DRIVE_DISTANCE = 140
         OBSTACLE_DISTANCE_THRESHOLD = 100
         WAIT_TIME = 10
 
+        SET_DISTANCE_DRIVE_SPEED = 100
         SWERVE_SPEED = 300
         MOTOR_MIN_ANGLE, MOTOR_MAX_ANGLE = 0, 90
         self.motor_target = MOTOR_MAX_ANGLE
@@ -264,16 +263,23 @@ class Robot:
         def wall_detected():
             return self.dist_sensor.distance() < OBSTACLE_DISTANCE_THRESHOLD
 
+        def hit_rear():
+            return self.touch_sensor.pressed()
+
+        def drive_back():
+            self.robot.drive(-SET_DISTANCE_DRIVE_SPEED, 0)
+            wait(WAIT_TIME)
+
         states = {
             "start'": State([(True, "start")], store_state),
-            "start": State([(did_turn(ANGLE_FOR_90_DEGREES), "check_wall_before_right")], turn(TURN_RATE)),
+            "start": State([(did_turn(ANGLE_FOR_90_DEGREES), "adjust_before_drive")], turn(TURN_RATE)),
+            "adjust_before_drive": State([(hit_rear, "check_wall_before_right"), (True, "adjust_before_drive")], drive_back),
             "check_wall_before_right": State([(wall_detected, "stop_and_turn_right'")], drive_straight),
             "stop_and_turn_right'": State([(True, "stop_and_turn_right")], store_state),
-            "stop_and_turn_right": State([(did_turn(-ANGLE_FOR_90_DEGREES), "drive_before_right'")], turn(-TURN_RATE)),
-            "drive_before_right'": State([(True, "drive_before_right")], store_state),
-            "drive_before_right": State([(did_drive(SHORT_DRIVE_DISTANCE), "turn_right_before_drive'")], drive_straight),
+            "stop_and_turn_right": State([(did_turn(-ANGLE_FOR_90_DEGREES), "turn_right_before_drive'")], turn(-TURN_RATE)),
             "turn_right_before_drive'": State([(True, "turn_right_before_drive")], store_state),
-            "turn_right_before_drive": State([(did_turn(-ANGLE_FOR_90_DEGREES), "check_wall_before_left'")], turn(-TURN_RATE)),
+            "turn_right_before_drive": State([(did_turn(-ANGLE_FOR_90_DEGREES), "adjust_before_drive2'")], turn(-TURN_RATE)),
+            "adjust_before_drive2": State([(hit_rear, "check_wall_before_left"), (True, "adjust_before_drive2")], drive_back),
             "check_wall_before_left'": State([(True, "check_wall_before_left")], store_state),
             "check_wall_before_left": State([(wall_detected, "stop_and_turn_left'")], drive_straight),
             "stop_and_turn_left'": State([(True, "stop_and_turn_left")], store_state),
