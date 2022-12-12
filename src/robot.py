@@ -312,7 +312,7 @@ class Robot:
             successor = cur_state.check_conditions()
             if successor:
                 print("CUR STATE ", successor)
-                cur_state = states.get(successor, successor)
+                cur_state = states[successor]
                 if cur_state.on_enter:
                     cur_state.on_enter()
         self.stop()
