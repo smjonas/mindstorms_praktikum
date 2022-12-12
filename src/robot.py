@@ -22,7 +22,7 @@ class Robot:
         self.robot = DriveBase(
             left_motor=self.left_motor, right_motor=self.right_motor, wheel_diameter=56, axle_track=166.5
         )
-        self.color_sensor_motor = Motor(Port.B)
+        self.color_sensor_motor = Motor(Port.C)
 
         self.color_sensor = ColorSensor(Port.S2)
         self.dist_sensor = UltrasonicSensor(Port.S4)
