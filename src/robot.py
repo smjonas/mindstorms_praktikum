@@ -35,6 +35,15 @@ class Robot:
             course.Stage.FIELD: Robot.field,
         }
 
+    # def reset_color_sensor_motor(self):
+    #     self.color_sensor_motor.run_time(-30, 1000)
+    #     self.color_sensor_motor.stop()
+    #     # self.color_sensor_motor.reset_angle(0)
+
+    def stop(self):
+        self.robot.stop()
+        self.color_sensor_motor.stop()
+
     def log(self, msg=""):
         ev3.screen.print(msg)
 
@@ -172,7 +181,7 @@ class Robot:
             if successor:
                 cur_state = states.get(successor, successor)
                 if cur_state == NEXT_LEVEL_STATE:
-                    self.robot.stop()
+                    self.stop()
                     self.course.running = False
                     self.log("Reached end of line")
                     return
@@ -206,20 +215,23 @@ class Robot:
         OBSTACLE_DISTANCE_THRESHOLD = 100
         WAIT_TIME = 10
 
-        MOTOR_SPEED = 30
-        MOTOR_MIN_ANGLE, MOTOR_MAX_ANGLE = -70, 30
-        motor_target = MOTOR_MIN_ANGLE
+        SWERVE_SPEED = 300
+        MOTOR_MIN_ANGLE, MOTOR_MAX_ANGLE = 0, 90
+        self.motor_target = MOTOR_MAX_ANGLE
+        self.color_sensor_motor.run(SWERVE_SPEED)
 
-        def swerve_color_sensor(motor_target):
+        def swerve_color_sensor():
             angle = self.color_sensor_motor.angle()
-            if motor_target == MOTOR_MIN_ANGLE and angle <= MOTOR_MIN_ANGLE:
-                motor_target = MOTOR_MAX_ANGLE
-            elif angle <= MOTOR_MIN_ANGLE:
-                motor_target = MOTOR_MIN_ANGLE
+            if self.motor_target == MOTOR_MIN_ANGLE and angle <= MOTOR_MIN_ANGLE:
+                # self.color_sensor_motor.stop()
+                self.motor_target = MOTOR_MAX_ANGLE
+                self.color_sensor_motor.run(SWERVE_SPEED)
+            elif self.motor_target == MOTOR_MAX_ANGLE and angle >= MOTOR_MAX_ANGLE:
+                # self.color_sensor_motor.stop()
+                self.motor_target = MOTOR_MIN_ANGLE
+                self.color_sensor_motor.run(-SWERVE_SPEED)
 
-            self.color_sensor_motor.run_angle(MOTOR_SPEED, motor_target)
             self.log(str(self.color_sensor_motor.angle()))
-
 
         # Nonblocking methods to tell the robot what to do
         def turn(turn_rate):
@@ -271,16 +283,15 @@ class Robot:
         }
         cur_state = states["start'"]
 
-        self.color_sensor_motor.run_angle(MOTOR_MAX_ANGLE, MOTOR_SPEED, Stop.HOLD, False)
         store_state()
         # Actual loop for this stage
         while not self.course.should_abort():
-            swerve_color_sensor(motor_target)
+            swerve_color_sensor()
             successor = cur_state.check_conditions()
             if successor:
                 print("CUR STATE ", successor)
                 cur_state = states.get(successor, successor)
                 if cur_state.on_enter:
                     cur_state.on_enter()
-        self.robot.stop()
+        self.stop()
 

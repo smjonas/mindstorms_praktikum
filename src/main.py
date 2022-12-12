@@ -9,6 +9,7 @@ from pybricks.hubs import EV3Brick
 ev3 = EV3Brick()
 course = Course()
 robot = Robot(course)
+
 menu = Menu(course)
 
 while True:
