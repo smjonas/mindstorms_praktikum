@@ -64,3 +64,12 @@ Gruppenmitglieder: Lukas Baldner, Jonas Strittmatter, Julian Shen
 - Rückwärtsfahren zum Ausrichten
 - Da Farbsensor eher links am Roboter, Routine beim Absuchen des Feldes angepasst
 - Geschwindigkeit des Roboters im Feld reduziert, um mit dem Arm den Boden genau genug absuchen zu können
+
+### 12.12.22 - 19.12.22
+- Algorithmus zum Paket in die Ecke schieben überlegt (ohne zur Brücke fahren)
+
+### 19.12.2022
+- Suchfeld fertig implementiert
+- Roboter fährt bei Delivery zum Suchspot
+- Suche nach richtiger Drehgeschwindigkeit und Implementierung zum Suchen der Ecke der Box
+- Roboter schiebt das Paket fast in die Ecke
