@@ -6,6 +6,7 @@ from pybricks.robotics import DriveBase
 from pybricks.tools import wait
 
 from state import State
+import time
 
 ev3 = EV3Brick()
 
@@ -218,7 +219,7 @@ class Robot:
         MOTOR_MIN_ANGLE, MOTOR_MAX_ANGLE = 0, 90
         self.motor_target = MOTOR_MAX_ANGLE
         self.color_sensor_motor.run(SWERVE_SPEED)
-        found_red, found_white = False, False
+        self.found_red, self.found_white = False, False
 
         def swerve_color_sensor():
             angle = self.color_sensor_motor.angle()
@@ -231,18 +232,16 @@ class Robot:
                 self.motor_target = MOTOR_MIN_ANGLE
                 self.color_sensor_motor.run(-SWERVE_SPEED)
 
-            self.log(str(self.color_sensor_motor.angle()))
-
         def check_colors():
             r, g, b = self.color_sensor.rgb()
             red = r > 20 and g < 15 and b < 10
             white = r > 40 and g > 60 and b > 50
-            if red:
-                found_red = True
-                ev3.speaker.beep(frequency=100, duration=1000)
-            elif white:
-                found_white = True
-                ev3.speaker.beep(frequency=500, duration=1000)
+            if red and not self.found_red:
+                self.found_red = True
+                ev3.speaker.beep(frequency=100, duration=10)
+            elif white and not self.found_white:
+                self.found_white = True
+                ev3.speaker.beep(frequency=500, duration=10)
 
         # Nonblocking methods to tell the robot what to do
         def turn(turn_rate):
@@ -258,6 +257,7 @@ class Robot:
         # Save information to check difference in future states
         def store_state():
             self.prev_state = self.robot.state()
+            self.time = int(time.time() * 1000.0)
 
         # Check differences in state
         def did_turn(degrees):
@@ -272,6 +272,12 @@ class Robot:
                 return delta >= distance_in_mm if distance_in_mm > 0 else delta <= distance_in_mm
             return did_drive_distance
 
+        def did_drive_time(time_in_ms):
+            def did_drive_time():
+                delta = int(time.time() * 1000.0) - self.time
+                return delta >= time_in_ms
+            return did_drive_time
+
         def wall_detected():
             return self.dist_sensor.distance() < OBSTACLE_DISTANCE_THRESHOLD
 
@@ -285,14 +291,17 @@ class Robot:
         states = {
             "start'": State([(True, "start")], store_state),
             "start": State([(did_turn(ANGLE_FOR_90_DEGREES), "adjust_before_drive")], turn(TURN_RATE)),
-            "adjust_before_drive": State([(hit_rear, "check_wall_before_right"), (True, "adjust_before_drive")], drive_back),
+            "adjust_before_drive": State([(hit_rear, "continue_driving_back'")], drive_back),
+            "continue_driving_back'": State([(True, "continue_driving_back")], store_state),
+            "continue_driving_back": State([(did_drive_time(700), "check_wall_before_right")], drive_back),
             "check_wall_before_right": State([(wall_detected, "stop_and_turn_right'")], drive_straight),
             "stop_and_turn_right'": State([(True, "stop_and_turn_right")], store_state),
             "stop_and_turn_right": State([(did_turn(-ANGLE_FOR_90_DEGREES), "turn_right_before_drive'")], turn(-TURN_RATE)),
             "turn_right_before_drive'": State([(True, "turn_right_before_drive")], store_state),
             "turn_right_before_drive": State([(did_turn(-ANGLE_FOR_90_DEGREES), "adjust_before_drive2")], turn(-TURN_RATE)),
-            "adjust_before_drive2": State([(hit_rear, "check_wall_before_left'"), (True, "adjust_before_drive2")], drive_back),
-            "check_wall_before_left'": State([(True, "check_wall_before_left")], store_state),
+            "adjust_before_drive2": State([(hit_rear, "continue_driving_back2'")], drive_back),
+            "continue_driving_back2'": State([(True, "continue_driving_back2")], store_state),
+            "continue_driving_back2": State([(did_drive_time(700), "check_wall_before_left")], drive_back),
             "check_wall_before_left": State([(wall_detected, "stop_and_turn_left'")], drive_straight),
             "stop_and_turn_left'": State([(True, "stop_and_turn_left")], store_state),
             "stop_and_turn_left": State([(did_turn(ANGLE_FOR_90_DEGREES), "drive_before_left'")], turn(TURN_RATE)),
@@ -306,12 +315,12 @@ class Robot:
         while not self.course.should_abort():
             swerve_color_sensor()
             check_colors()
-            if found_red and found_white:
+            if self.found_red and self.found_white:
                 self.course.running = False
                 break
             successor = cur_state.check_conditions()
             if successor:
-                print("CUR STATE ", successor)
+                self.log("CUR STATE " + successor)
                 cur_state = states[successor]
                 if cur_state.on_enter:
                     cur_state.on_enter()
