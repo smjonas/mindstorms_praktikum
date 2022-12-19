@@ -12,6 +12,8 @@ ev3 = EV3Brick()
 
 
 class Robot:
+    NEXT_LEVEL_STATE = "next_level"
+
     def __init__(self, course):
         self.course = course
 
@@ -75,7 +77,7 @@ class Robot:
         WAIT_TIME = 10
         ANGLE_FOR_90_DEGREES = 84
 
-        NEXT_LEVEL_STATE, OBSTACLE_STATE = "next_level", "store_and_obst_1"
+        OBSTACLE_STATE = "store_and_obst_1"
 
         # Check brightness
         def is_dark():
@@ -136,7 +138,7 @@ class Robot:
         # Defining states
         def check_events(transitions, on_enter=None):
             new_transitions = [
-                (self.check_blueline, NEXT_LEVEL_STATE),
+                (self.check_blueline, Robot.NEXT_LEVEL_STATE),
                 (lambda: self.dist_sensor.distance() < OBSTACLE_DISTANCE_THRESHOLD, OBSTACLE_STATE),
             ]
             return State(new_transitions + transitions, on_enter)
@@ -181,7 +183,7 @@ class Robot:
             successor = cur_state.check_conditions()
             if successor:
                 cur_state = states.get(successor, successor)
-                if cur_state == NEXT_LEVEL_STATE:
+                if cur_state == Robot.NEXT_LEVEL_STATE:
                     self.stop()
                     self.course.running = False
                     self.log("Reached end of line")
@@ -193,10 +195,59 @@ class Robot:
 
     # Stage 2: Push a block in the corner
     def delivery(self):
+        WAIT_TIME = 10
+        SET_DISTANCE_DRIVE_SPEED = 100
+
+        # Angle to the corner of the arena
+        BETA = 45
+        MAX_BOX_DISTANCE = 400
+
+        def did_turn(degrees):
+            def did_turn_degrees():
+                delta = self.robot.angle() - self.prev_state[2]
+                return delta >= degrees if degrees > 0 else delta <= degrees
+            return did_turn_degrees
+
+        def did_drive(distance_in_mm):
+            def did_drive_distance():
+                delta = self.robot.distance() - self.prev_state[0]
+                return delta >= distance_in_mm if distance_in_mm > 0 else delta <= distance_in_mm
+            return did_drive_distance
+
+        # Nonblocking methods to tell the robot what to do
+        def turn(turn_rate):
+            def turn_angle():
+                self.robot.drive(0, turn_rate)
+                wait(WAIT_TIME)
+            return turn_angle
+
+        def drive_straight():
+            self.robot.drive(SET_DISTANCE_DRIVE_SPEED, 0)
+            wait(WAIT_TIME)
+
+        def drive_back():
+            self.robot.drive(-SET_DISTANCE_DRIVE_SPEED, 0)
+            wait(WAIT_TIME)
+
+        states = {
+            "start": State([(did_drive(200), "turn_right")], drive_straight()),
+            "turn_right": State([(did_turn(90), "drive_back")], drive_straight()),
+        }
+        cur_state = states["start"]
+
+        # Actual loop for this stage
         while not self.course.should_abort():
-            if self.check_blueline():
-                self.robot.stop()
-                return
+            successor = cur_state.check_conditions()
+            if successor:
+                cur_state = states.get(successor, successor)
+                if cur_state == Robot.NEXT_LEVEL_STATE:
+                    self.stop()
+                    self.course.running = False
+                    return
+
+                if cur_state.on_enter:
+                    cur_state.on_enter()
+        self.robot.stop()
 
     # Stage 3: Cross a bridge with perpendicular ramps leading up/down at the ends
     def bridge(self):
