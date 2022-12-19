@@ -196,8 +196,9 @@ class Robot:
     # Stage 2: Push a block in the corner
     def delivery(self):
         WAIT_TIME = 10
-        TURN_RATE = 70.0
-        SET_DISTANCE_DRIVE_SPEED = 100
+        TURN_RATE = 70
+        SEARCH_TURN_RATE = -8
+        SET_DISTANCE_DRIVE_SPEED = 300
 
         # Angle to the corner of the arena
         BETA = 45
@@ -231,7 +232,8 @@ class Robot:
             wait(WAIT_TIME)
 
         def store_state():
-            self.prev_state = self.robot.state() + (self.dist_sensor.distance(),)
+            self.prev_state = self.robot.state()
+            self.dist = self.dist_sensor.distance()
             self.time = int(time.time() * 1000.0)
 
         def hit_rear():
@@ -247,20 +249,26 @@ class Robot:
             dist = self.dist_sensor.distance()
             if dist > MAX_BOX_DISTANCE:
                 return False
-            if dist < self.prev_state[4]:
-                self.prev_state[4] = dist
+            if dist < self.dist:
+                self.log("Fst box " + str(dist))
+                self.dist = dist
                 return True
             else:
-                self.prev_state[4] = dist
+                self.dist = dist
                 return False
 
         def nearest_box_point_detected():
             dist = self.dist_sensor.distance()
-            if dist > self.prev_state[4]:
-                self.prev_state[4] = dist
+            delta = dist - self.dist
+            percentage_change = delta / float(dist)
+            if percentage_change > 0.1:
+                return False
+            elif dist > self.dist and percentage_change > 0.03:
+                self.log("corner " + str(dist))
+                self.dist = dist
                 return True
             else:
-                self.prev_state[4] = dist
+                self.dist = dist
                 return False
 
         states = {
@@ -270,7 +278,7 @@ class Robot:
             "drive_back'": State([(True, "drive_back")], store_state),
             "drive_back": State([(hit_rear, "continue_driving_back'")], drive_back),
             "continue_driving_back'": State([(True, "continue_driving_back")], store_state),
-            "continue_driving_back": State([(did_drive_time(700), "drive_straight'")], drive_back),
+            "continue_driving_back": State([(did_drive_time(200), "drive_straight'")], drive_back),
             "drive_straight'": State([(True, "drive_straight")], store_state),
             "drive_straight": State([(did_drive(50), "turn_left'")], drive_straight),
             "turn_left'": State([(True, "turn_left")], store_state),
@@ -278,8 +286,12 @@ class Robot:
             "drive_straight2'": State([(True, "drive_straight2")], store_state),
             "drive_straight2": State([(did_drive(1000), "search'")], drive_straight),
             "search'": State([(True, "search")], store_state),
-            "search": State([(box_detected, "search_nearest_box_point")], turn(-TURN_RATE / 2)),
-            "search_nearest_box_point": State([(nearest_box_point_detected, Robot.NEXT_LEVEL_STATE)], turn(-TURN_RATE / 2)),
+            "search": State([(box_detected, "search_nearest_box_point")], turn(SEARCH_TURN_RATE)),
+            "search_nearest_box_point": State([(nearest_box_point_detected, "turn_around'")], turn(SEARCH_TURN_RATE)),
+            "turn_around'": State([(True, "turn_around")], store_state),
+            "turn_around": State([(did_turn(Robot.ANGLE_FOR_90_DEGREES * 2), "push_box")], turn(TURN_RATE)),
+            "push_box'": State([(True, "push_box")], store_state),
+            "push_box": State([(did_drive_time(5000), Robot.NEXT_LEVEL_STATE)], drive_back)
         }
         cur_state = states["start"]
         store_state()
@@ -292,6 +304,8 @@ class Robot:
                 cur_state = states.get(successor, successor)
                 if cur_state == Robot.NEXT_LEVEL_STATE:
                     self.stop()
+                    while True:
+                        pass
                     self.course.running = False
                     return
 
@@ -301,10 +315,16 @@ class Robot:
 
     # Stage 3: Cross a bridge with perpendicular ramps leading up/down at the ends
     def bridge(self):
-        while not self.course.should_abort():
-            if self.check_blueline():
-                self.robot.stop()
-                return
+        self.robot.drive(0, -8)
+        prev = self.dist_sensor.distance()
+        while True:
+            dist = self.dist_sensor.distance()
+            delta = dist - prev
+            if delta > 0:
+                self.log("bigger" + str((delta / float(prev)) * 100.0))
+            elif delta < 0:
+                self.log("smaller" + str((-delta / float(prev)) * 100.0))
+            prev = dist
 
     # Stage 4: Find a red and white patch of color on the floor
     def field(self):
