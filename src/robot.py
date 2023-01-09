@@ -41,7 +41,7 @@ class Robot:
 
         self.color_sensor = ColorSensor(Port.S2)
         self.dist_sensor = UltrasonicSensor(Port.S4)
-        self.touch_sensor = TouchSensor(Port.S3)
+        self.touch_sensor = TouchSensor(Port.S1)
 
         self.stage_fns = {
             course.Stage.LINE: Robot.lines,
@@ -93,7 +93,7 @@ class Robot:
 
         WAIT_TIME = 10
 
-        OBSTACLE_STATE = "store_and_obst_1"
+        OBSTACLE_STATE = "obst_1"
 
         # Check brightness
         def is_dark():
@@ -272,13 +272,13 @@ class Robot:
                 return False
 
         states = resolve_stored_states({
-            "start": State([(did_drive(200), "turn_right'")], drive_straight),
+            "start": State([(did_drive(200), "turn_right")], drive_straight),
             "!turn_right": State([(did_turn(-Robot.ANGLE_FOR_90_DEGREES), "drive_back")], turn(-TURN_RATE)),
             "!drive_back": State([(hit_rear, "continue_driving_back")], drive_back),
             "!continue_driving_back": State([(did_drive_time(200), "drive_straight")], drive_back),
-            "!drive_straight": State([(did_drive(50), "turn_left")], drive_straight),
+            "!drive_straight": State([(did_drive(30), "turn_left")], drive_straight),
             "!turn_left": State([(did_turn(Robot.ANGLE_FOR_90_DEGREES), "drive_straight2")], turn(TURN_RATE)),
-            "drive_straight2": State([(True, "drive_straight2")], store_state),
+            "drive_straight2": State([(True, "drive_straight2")], self.store_state),
             "!drive_straight2": State([(did_drive(1000), "search")], drive_straight),
             "!search": State([(box_detected, "search_nearest_box_point")], turn(SEARCH_TURN_RATE)),
             "search_nearest_box_point": State([(nearest_box_point_detected, "turn_around")], turn(SEARCH_TURN_RATE)),
@@ -297,8 +297,8 @@ class Robot:
                 cur_state = states.get(successor, successor)
                 if cur_state == Robot.NEXT_LEVEL_STATE:
                     self.stop()
-                    while True:
-                        pass
+                    # while True:
+                    #    pass
                     self.course.running = False
                     return
 
@@ -308,16 +308,24 @@ class Robot:
 
     # Stage 3: Cross a bridge with perpendicular ramps leading up/down at the ends
     def bridge(self):
+        self.store_state()
         self.robot.drive(0, -8)
-        prev = self.dist_sensor.distance()
-        while True:
+        values = ""
+        #with open("./values.txt", "w+") as writer:
+        i = 1
+        #prev = self.dist_sensor.distance()
+        while (self.prev_state[2] - self.robot.angle() < 90):
             dist = self.dist_sensor.distance()
-            delta = dist - prev
-            if delta > 0:
-                self.log("bigger" + str((delta / float(prev)) * 100.0))
-            elif delta < 0:
-                self.log("smaller" + str((-delta / float(prev)) * 100.0))
-            prev = dist
+            values += (str(i) + "," + str(dist) + " ")
+            i += 1
+            wait(50)
+            #delta = dist - prev
+            #if delta > 0:
+            #    self.log("bigger" + str((delta / float(prev)) * 100.0))
+            #elif delta < 0:
+            #    self.log("smaller" + str((-delta / float(prev)) * 100.0))
+            #prev = dist
+        print(values)
 
     # Stage 4: Find a red and white patch of color on the floor
     def field(self):
@@ -403,7 +411,7 @@ class Robot:
 
         states = resolve_stored_states({
             "!start": State([(did_turn(Robot.ANGLE_FOR_90_DEGREES), "adjust_before_drive")], turn(TURN_RATE)),
-            "adjust_before_drive": State([(hit_rear, "continue_driving_back'")], drive_back),
+            "adjust_before_drive": State([(hit_rear, "continue_driving_back")], drive_back),
             "!continue_driving_back": State([(did_drive_time(700), "check_wall_before_right")], drive_back),
             "check_wall_before_right": State([(wall_detected, "stop_and_turn_right")], drive_straight),
             "!stop_and_turn_right": State([(did_turn(-Robot.ANGLE_FOR_90_DEGREES), "turn_right_before_drive")], turn(-TURN_RATE)),
@@ -415,7 +423,7 @@ class Robot:
             "!drive_before_left": State([(did_drive(SHORT_DRIVE_DISTANCE), "start")], drive_straight)
         }, self.store_state)
 
-        cur_state = states["start'"]
+        cur_state = states["start"]
         store_state()
 
         # Actual loop for this stage
