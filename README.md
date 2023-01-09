@@ -73,3 +73,11 @@ Gruppenmitglieder: Lukas Baldner, Jonas Strittmatter, Julian Shen
 - Roboter fährt bei Delivery zum Suchspot
 - Suche nach richtiger Drehgeschwindigkeit und Implementierung zum Suchen der Ecke der Box
 - Roboter schiebt das Paket fast in die Ecke
+
+### 09.01.2023
+- Refactoring: bei Zuständen, die mit "!" beginnen wird nun automatisch der aktuelle
+  Zustand des Roboters gespeichert. Das spart viel duplizierten Code :)
+- Testen des Ultraschall-Sensors (Plotten der Sensordaten), um Realisierbarkeit unserer
+  Strategie für das Paket-Level zu prüfen
+- Umbau des Roboters; Ziel: Ultraschall-Sensor soll beweglich sein und Farb- und
+  Ultraschall-Sensor sollen beide gleichzeitig nach vorne ausgerichtet sein
