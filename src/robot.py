@@ -55,6 +55,11 @@ class Robot:
     #     self.color_sensor_motor.stop()
     #     # self.color_sensor_motor.reset_angle(0)
 
+    def store_state():
+        self.prev_state = self.robot.state()
+        self.dist = self.dist_sensor.distance()
+        self.time = int(time.time() * 1000.0)
+
     def stop(self):
         self.robot.stop()
         self.color_sensor_motor.stop()
@@ -231,11 +236,6 @@ class Robot:
             self.robot.drive(-SET_DISTANCE_DRIVE_SPEED, 0)
             wait(WAIT_TIME)
 
-        def store_state():
-            self.prev_state = self.robot.state()
-            self.dist = self.dist_sensor.distance()
-            self.time = int(time.time() * 1000.0)
-
         def hit_rear():
             return self.touch_sensor.pressed()
 
@@ -287,7 +287,7 @@ class Robot:
         }, self.store_state)
 
         cur_state = states["start"]
-        store_state()
+        self.store_state()
         drive_straight()
 
         # Actual loop for this stage
