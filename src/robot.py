@@ -13,7 +13,6 @@ ev3 = EV3Brick()
 
 def resolve_stored_states(states, on_enter_cb):
     for key, state in states.copy().items():
-        print(key, type(state))
         # Turn store_state("start") == "start!": state into the two key-value-pairs...
         if key.startswith("!"):
             # "start": State([(True, "start!")], on_enter_cb)
@@ -184,19 +183,17 @@ class Robot:
 
         cur_state = states["start"]
 
-        print(states.copy().items())
         # Actual loop for this stage
         while not self.course.should_abort():
             successor = cur_state.check_conditions()
             if successor:
-                print(cur_state, successor)
                 cur_state = states.get(successor, successor)
                 if cur_state == Robot.NEXT_LEVEL_STATE:
                     self.stop()
                     self.course.running = False
                     self.log("Reached end of line")
                     return
-                print(cur_state)
+                
                 if cur_state.on_enter:
                     cur_state.on_enter()
         self.robot.stop()
