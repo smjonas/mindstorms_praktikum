@@ -12,11 +12,12 @@ ev3 = EV3Brick()
 
 
 def resolve_stored_states(states, on_enter_cb):
-    for key, state in states.items():
+    for key, state in states.copy().items():
+        print(key, type(state))
         # Turn store_state("start") == "start!": state into the two key-value-pairs...
         if key.startswith("!"):
             # "start": State([(True, "start!")], on_enter_cb)
-            states[key[:-1]] = State([(True, key)], on_enter_cb)
+            states[key[1:]] = State([(True, key)], on_enter_cb)
             # and "start!": state
             states[key] = state
     return states
@@ -55,7 +56,7 @@ class Robot:
     #     self.color_sensor_motor.stop()
     #     # self.color_sensor_motor.reset_angle(0)
 
-    def store_state():
+    def store_state(self):
         self.prev_state = self.robot.state()
         self.dist = self.dist_sensor.distance()
         self.time = int(time.time() * 1000.0)
@@ -88,7 +89,7 @@ class Robot:
         SET_ANGLE_TURN_RATE = 40
         SET_DISTANCE_DRIVE_SPEED = 100
 
-        GAP_TURNBACK_ANGLE = 105
+        GAP_TURNBACK_ANGLE = 110
         OBSTACLE_DISTANCE_THRESHOLD = 70
 
         WAIT_TIME = 10
@@ -183,17 +184,19 @@ class Robot:
 
         cur_state = states["start"]
 
+        print(states.copy().items())
         # Actual loop for this stage
         while not self.course.should_abort():
             successor = cur_state.check_conditions()
             if successor:
+                print(cur_state, successor)
                 cur_state = states.get(successor, successor)
                 if cur_state == Robot.NEXT_LEVEL_STATE:
                     self.stop()
                     self.course.running = False
                     self.log("Reached end of line")
                     return
-
+                print(cur_state)
                 if cur_state.on_enter:
                     cur_state.on_enter()
         self.robot.stop()
