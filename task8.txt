@@ -1,0 +1,25 @@
+1.
+Von der blauen Linie ein bisschen gerade aus (mit bisschen links evtl), um an der linken Wand vorbeizukommen
+Danach Sensor zur Seite ausfahren und mit 2. weiter
+
+2.
+Lichtsensor erkennt innere Kante der Brücke, daran entlang hochfahren (wie beim Linienfolgen)
+-evtl Gewicht ausbalancieren
+
+3.
+Da Lichtsensor links, erkennt Brückenecke
+(vielleicht noch Gyro verwenden)
+
+4.
+Wie 2.
+
+5.
+Wie 3. und 2.
+-Wieder Frage der Gewichtsverteilung
+Distanz messen und rechtzeitig Sensor einfahren, um nicht an der Wand hängenzubleiben
+
+6.
+-Farbwerte benutzen (nichts und Schwarz)  --> benutzen, falls Helligkeit nicht geht
+-Helligkeit  --> wollen wir benutzen
+-Ultraschall-Distanz
+(-vielleicht Berührungssensor-Konstruktion)
