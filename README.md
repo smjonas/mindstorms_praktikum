@@ -81,3 +81,7 @@ Gruppenmitglieder: Lukas Baldner, Jonas Strittmatter, Julian Shen
   Strategie für das Paket-Level zu prüfen
 - Umbau des Roboters; Ziel: Ultraschall-Sensor soll beweglich sein und Farb- und
   Ultraschall-Sensor sollen beide gleichzeitig nach vorne ausgerichtet sein
+
+### 09.01.23 - 16.01.23
+- Überlegungen aufgeschrieben für Brücke überqueren
+
