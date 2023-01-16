@@ -87,7 +87,7 @@ class Robot:
         ON_LINE_DRIVE_SPEED = 60
 
         SET_ANGLE_TURN_RATE = 40
-        SET_DISTANCE_DRIVE_SPEED = 200
+        DRIVE_SPEED = 200
 
         GAP_TURNBACK_ANGLE = 110
         OBSTACLE_DISTANCE_THRESHOLD = 70
@@ -142,11 +142,11 @@ class Robot:
 
         # TODO: speed parameter (slower for gap crossing)
         def drive_straight():
-            self.robot.drive(SET_DISTANCE_DRIVE_SPEED, 0)
+            self.robot.drive(DRIVE_SPEED, 0)
             wait(WAIT_TIME)
 
         def drive_back():
-            self.robot.drive(-SET_DISTANCE_DRIVE_SPEED, 0)
+            self.robot.drive(-DRIVE_SPEED, 0)
             wait(WAIT_TIME)
 
         # Defining states
@@ -196,7 +196,7 @@ class Robot:
                     #self.course.running = False
                     self.log("Reached end of line")
                     return
-                
+
                 if cur_state.on_enter:
                     cur_state.on_enter()
         self.robot.stop()
@@ -205,7 +205,7 @@ class Robot:
     def delivery(self):
         WAIT_TIME = 10
         TURN_RATE = 70
-        SET_DISTANCE_DRIVE_SPEED = 300
+        DRIVE_SPEED = 300
 
         SWERVE_SPEED = 60
         MAX_BOX_DISTANCE = 340
@@ -237,7 +237,7 @@ class Robot:
             return drive_straight_speed
 
         def drive_back():
-            self.robot.drive(-SET_DISTANCE_DRIVE_SPEED, 0)
+            self.robot.drive(-DRIVE_SPEED, 0)
             wait(WAIT_TIME)
 
         def swerve(speed):
@@ -276,37 +276,37 @@ class Robot:
 
         self.stop()
         states = resolve_stored_states({
-            "start": State([(did_drive(200), "turn_right")], drive_straight(SET_DISTANCE_DRIVE_SPEED)),
+            "start": State([(did_drive(200), "turn_right")], drive_straight(DRIVE_SPEED)),
             "!turn_right": State([(did_turn(-82), "drive_back")], turn(-TURN_RATE)),
             "!drive_back": State([(hit_rear, "continue_driving_back")], drive_back),
             "!continue_driving_back": State([(did_drive_time(700), "drive_straight")], drive_back),
             "!drive_straight": State([(did_drive(5), "turn_left")], drive_straight(100)),
             "!turn_left": State([(did_turn(82), "drive_straight2")], turn(TURN_RATE)),
-            "!drive_straight2": State([(did_drive(400), "turn_us_sensor")], drive_straight(SET_DISTANCE_DRIVE_SPEED)),
+            "!drive_straight2": State([(did_drive(400), "turn_us_sensor")], drive_straight(DRIVE_SPEED)),
             "!turn_us_sensor": State([(did_swerve_angle(110), "search")], swerve(SWERVE_SPEED)),
             # TODO: Roboter an Wand ausrichten
             "!search": State([(box_detected, "drive_next_to_box")], drive_straight(BOX_SEARCH_SPEED)),
-            "!drive_next_to_box": State([(did_drive(150), "turn_left2")], drive_straight(SET_DISTANCE_DRIVE_SPEED)),
+            "!drive_next_to_box": State([(did_drive(150), "turn_left2")], drive_straight(DRIVE_SPEED)),
             "!turn_left2": State([(did_turn(86), "push_box_edge1")], turn(TURN_RATE)),
             "!push_box_edge1": State([(did_drive_time(0), "turn_sensor_back")], drive_back),
             "turn_sensor_back": State([(did_swerve_angle(-110), "push_box_edge2")], swerve(-SWERVE_SPEED)),
             "push_box_edge2": State([(did_drive_time(3000), "drive_straight3")], drive_back),
-            "!drive_straight3": State([(did_drive(15), "turn_right2")], drive_straight(SET_DISTANCE_DRIVE_SPEED)),
+            "!drive_straight3": State([(did_drive(15), "turn_right2")], drive_straight(DRIVE_SPEED)),
             "!turn_right2": State([(did_turn(-Robot.ANGLE_FOR_90_DEGREES), "drive_back2")], turn(-TURN_RATE)),
             "!drive_back2": State([(did_drive(-150), "turn_left3")], drive_back),
             "!turn_left3": State([(did_turn(Robot.ANGLE_FOR_90_DEGREES), "drive_back3")], turn(TURN_RATE)),
             "!drive_back3": State([(did_drive(-150), "turn_left4")], drive_back),
             "!turn_left4": State([(did_turn(Robot.ANGLE_FOR_90_DEGREES), "push_box_corner")], turn(TURN_RATE)),
             "!push_box_corner": State([(did_drive_time(3000), "drive_straight4")], drive_back),
-            "!drive_straight4": State([(did_drive(90), "turn_right3")], drive_straight(SET_DISTANCE_DRIVE_SPEED)),
+            "!drive_straight4": State([(did_drive(90), "turn_right3")], drive_straight(DRIVE_SPEED)),
             "!turn_right3": State([(did_turn(-25), "drive_straight5")], turn(-TURN_RATE)),
-            "!drive_straight5": check_events([(did_drive(500), "turn_left5")], drive_straight(SET_DISTANCE_DRIVE_SPEED)),
+            "!drive_straight5": check_events([(did_drive(500), "turn_left5")], drive_straight(DRIVE_SPEED)),
             "!turn_left5": check_events([(did_turn(25), "done")], turn(TURN_RATE)),
         }, self.store_state)
 
         cur_state = states["start"]
         self.store_state()
-        drive_straight(SET_DISTANCE_DRIVE_SPEED)()
+        drive_straight(DRIVE_SPEED)()
 
         # Actual loop for this stage
         while not self.course.should_abort():
@@ -355,7 +355,7 @@ class Robot:
         OBSTACLE_DISTANCE_THRESHOLD = 100
         WAIT_TIME = 10
 
-        SET_DISTANCE_DRIVE_SPEED = 100
+        DRIVE_SPEED = 100
         SWERVE_SPEED = 300
         MOTOR_MIN_ANGLE, MOTOR_MAX_ANGLE = 0, 90
         self.motor_target = MOTOR_MAX_ANGLE
@@ -426,7 +426,7 @@ class Robot:
             return self.touch_sensor.pressed()
 
         def drive_back():
-            self.robot.drive(-SET_DISTANCE_DRIVE_SPEED, 0)
+            self.robot.drive(-DRIVE_SPEED, 0)
             wait(WAIT_TIME)
 
         states = resolve_stored_states({
