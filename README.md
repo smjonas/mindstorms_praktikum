@@ -1,6 +1,6 @@
 ## Gruppe 04
 Gruppenmitglieder: Lukas Baldner, Jonas Strittmatter, Julian Shen
-
+reamd
 ## Aufbau des Roboters
 
 
@@ -55,7 +55,6 @@ Gruppenmitglieder: Lukas Baldner, Jonas Strittmatter, Julian Shen
 - Anpassen der Parameter, wie DRIVE_SPEED, TURN_RATE..., sodass das Linienfolgen deutlich flüssiger funktioniert
 - Nutzen des Touchsensors bei dem Rückwärtsfahren beim Obstacle
 - Code für Farbfeldsuche angefangen: Zustände für das Fahren erstellt
-- TODO: Rückwärtsfahren zum Ausrichten, Farben erkennen, Farbsensor korrekt drehen
 
 ### 12.12.2022
 - Motor für Farbsensor umgebaut, um das Spiel des Arms zu reduzieren
@@ -85,3 +84,14 @@ Gruppenmitglieder: Lukas Baldner, Jonas Strittmatter, Julian Shen
 ### 09.01.23 - 16.01.23
 - Überlegungen aufgeschrieben für Brücke überqueren
 
+### 16.01.23
+- Strategie für Paket-Level geändert / neu implementiert
+- Werte für Paket-Level angepasst
+- bei Hindernis Distanzen angepasst
+
+TODO:
+- rename SET_DISTANCE_DRIVE_SPEED
+- use absolute values in did_drive
+- extract did_drive, did_turn, etc. functions to extra file
+- align before driving around obstacle
+- align before pushing box
