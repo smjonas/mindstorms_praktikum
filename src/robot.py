@@ -84,6 +84,12 @@ class Robot:
             return delta >= distance_in_mm if distance_in_mm > 0 else delta <= distance_in_mm
         return did_drive_distance
 
+    def did_drive_time(self, time_in_ms):
+        def did_drive_time():
+            delta = int(time.time() * 1000.0) - self.time
+            return delta >= time_in_ms
+        return did_drive_time
+
     def did_turn(self, degrees):
         def did_turn_degrees():
             delta = self.robot.angle() - self.prev_state[2]
@@ -235,12 +241,6 @@ class Robot:
                 self.color_sensor_motor.run(speed)
             return swerve
 
-        def did_drive_time(time_in_ms):
-            def did_drive_time():
-                delta = int(time.time() * 1000.0) - self.time
-                return delta >= time_in_ms
-            return did_drive_time
-
         def did_swerve_angle(angle):
             def did_swerve_angle():
                 delta = self.color_sensor_motor.angle() - self.swerve_angle
@@ -387,12 +387,6 @@ class Robot:
             self.prev_state = self.robot.state()
             self.time = int(time.time() * 1000.0)
 
-        def did_drive_time(time_in_ms):
-            def did_drive_time():
-                delta = int(time.time() * 1000.0) - self.time
-                return delta >= time_in_ms
-            return did_drive_time
-
         def wall_detected():
             return self.dist_sensor.distance() < OBSTACLE_DISTANCE_THRESHOLD
 
@@ -403,12 +397,12 @@ class Robot:
         states = resolve_stored_states({
             "!start": State([(self.did_turn(Robot.ANGLE_FOR_90_DEGREES), "adjust_before_drive")], turn(TURN_RATE)),
             "adjust_before_drive": State([(self.hit_rear, "continue_driving_back")], drive_back),
-            "!continue_driving_back": State([(did_drive_time(700), "check_wall_before_right")], drive_back),
+            "!continue_driving_back": State([(self.did_drive_time(700), "check_wall_before_right")], drive_back),
             "check_wall_before_right": State([(wall_detected, "stop_and_turn_right")], drive_straight),
             "!stop_and_turn_right": State([(self.did_turn(-Robot.ANGLE_FOR_90_DEGREES), "turn_right_before_drive")], turn(-TURN_RATE)),
             "!turn_right_before_drive": State([(self.did_turn(-Robot.ANGLE_FOR_90_DEGREES), "adjust_before_drive2")], turn(-TURN_RATE)),
             "adjust_before_drive2": State([(self.hit_rear, "continue_driving_back2")], drive_back),
-            "!continue_driving_back2": State([(did_drive_time(700), "check_wall_before_left")], drive_back),
+            "!continue_driving_back2": State([(self.did_drive_time(700), "check_wall_before_left")], drive_back),
             "check_wall_before_left": State([(wall_detected, "stop_and_turn_left")], drive_straight),
             "!stop_and_turn_left": State([(self.did_turn(Robot.ANGLE_FOR_90_DEGREES), "drive_before_left")], turn(TURN_RATE)),
             "!drive_before_left": State([(self.did_drive(SHORT_DRIVE_DISTANCE), "start")], drive_straight)
