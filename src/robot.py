@@ -77,6 +77,14 @@ class Robot:
         r, g, b = self.color_sensor.rgb()
         return b >= 29 and g < 30 and r < 10
 
+    # BEGIN CONDITION FUNCTIONS
+    def did_drive(self, distance_in_mm):
+        def did_drive_distance():
+            delta = self.robot.distance() - self.prev_state[0]
+            return delta >= distance_in_mm if distance_in_mm > 0 else delta <= distance_in_mm
+        return did_drive_distance
+    # END CONDITION FUNCTIONS
+
     # Methods for stages of course
     # Stage 1: Following a white line with gaps and an obstacle
     def lines(self):
@@ -113,12 +121,6 @@ class Robot:
                 delta = self.robot.angle() - self.prev_state[2]
                 return delta >= degrees if degrees > 0 else delta <= degrees
             return did_turn_degrees
-
-        def did_drive(distance_in_mm):
-            def did_drive_distance():
-                delta = self.robot.distance() - self.prev_state[0]
-                return delta >= distance_in_mm if distance_in_mm > 0 else delta <= distance_in_mm
-            return did_drive_distance
 
         def hit_rear():
             return self.touch_sensor.pressed()
@@ -171,15 +173,15 @@ class Robot:
                 turn(-ON_LINE_TURN_RATE),
             ),
             "!turn_back_left": State([(did_turn(GAP_TURNBACK_ANGLE), "drive_straight")], turn(SET_ANGLE_TURN_RATE)),
-            "!drive_straight": check_events([(is_gray, "start"), (is_light, "start"), (did_drive(120), "start")], drive_straight),
+            "!drive_straight": check_events([(is_gray, "start"), (is_light, "start"), (self.did_drive(120), "start")], drive_straight),
             # TODO: vor obst1 schon einmal an obstacle ausrichten
             "!obst_1": State([(did_turn(Robot.ANGLE_FOR_90_DEGREES), "obst_2")], turn(SET_ANGLE_TURN_RATE)),
-            "obst_2": State([(did_drive(172), "obst_3")], drive_straight),
+            "obst_2": State([(self.did_drive(172), "obst_3")], drive_straight),
             # Not just angle for 90 degrees to make sure we do not crash into the obstacle
             "!obst_3": State([(did_turn(-Robot.ANGLE_FOR_90_DEGREES + 4), "obst_4")], turn(-SET_ANGLE_TURN_RATE)),
-            "obst_4": State([(did_drive(420), "obst_5")], drive_straight),
+            "obst_4": State([(self.did_drive(420), "obst_5")], drive_straight),
             "!obst_5": State([(did_turn(-Robot.ANGLE_FOR_90_DEGREES), "obst_6")], turn(-SET_ANGLE_TURN_RATE)),
-            "obst_6": State([(did_drive(172), "obst_7")], drive_straight),
+            "obst_6": State([(self.did_drive(172), "obst_7")], drive_straight),
             "!obst_7": State([(did_turn(Robot.ANGLE_FOR_90_DEGREES), "obst_8")], turn(SET_ANGLE_TURN_RATE)),
             "obst_8": State([(hit_rear, "start")], drive_back)
         }, self.store_state)
@@ -216,12 +218,6 @@ class Robot:
                 delta = self.robot.angle() - self.prev_state[2]
                 return delta >= degrees if degrees > 0 else delta <= degrees
             return did_turn_degrees
-
-        def did_drive(distance_in_mm):
-            def did_drive_distance():
-                delta = self.robot.distance() - self.prev_state[0]
-                return delta >= distance_in_mm if distance_in_mm > 0 else delta <= distance_in_mm
-            return did_drive_distance
 
         # Nonblocking methods to tell the robot what to do
         def turn(turn_rate):
@@ -276,31 +272,31 @@ class Robot:
 
         self.stop()
         states = resolve_stored_states({
-            "start": State([(did_drive(200), "turn_right")], drive_straight(DRIVE_SPEED)),
+            "start": State([(self.did_drive(200), "turn_right")], drive_straight(DRIVE_SPEED)),
             "!turn_right": State([(did_turn(-82), "drive_back")], turn(-TURN_RATE)),
             "!drive_back": State([(hit_rear, "continue_driving_back")], drive_back),
-            "!continue_driving_back": State([(did_drive_time(700), "drive_straight")], drive_back),
-            "!drive_straight": State([(did_drive(5), "turn_left")], drive_straight(100)),
+            "!continue_driving_back": State([(self.did_drive_time(700), "drive_straight")], drive_back),
+            "!drive_straight": State([(self.did_drive(5), "turn_left")], drive_straight(100)),
             "!turn_left": State([(did_turn(82), "drive_straight2")], turn(TURN_RATE)),
-            "!drive_straight2": State([(did_drive(400), "turn_us_sensor")], drive_straight(DRIVE_SPEED)),
+            "!drive_straight2": State([(self.did_drive(400), "turn_us_sensor")], drive_straight(DRIVE_SPEED)),
             "!turn_us_sensor": State([(did_swerve_angle(110), "search")], swerve(SWERVE_SPEED)),
             # TODO: Roboter an Wand ausrichten
             "!search": State([(box_detected, "drive_next_to_box")], drive_straight(BOX_SEARCH_SPEED)),
-            "!drive_next_to_box": State([(did_drive(150), "turn_left2")], drive_straight(DRIVE_SPEED)),
+            "!drive_next_to_box": State([(self.did_drive(150), "turn_left2")], drive_straight(DRIVE_SPEED)),
             "!turn_left2": State([(did_turn(86), "push_box_edge1")], turn(TURN_RATE)),
-            "!push_box_edge1": State([(did_drive_time(0), "turn_sensor_back")], drive_back),
+            "!push_box_edge1": State([(self.did_drive_time(0), "turn_sensor_back")], drive_back),
             "turn_sensor_back": State([(did_swerve_angle(-110), "push_box_edge2")], swerve(-SWERVE_SPEED)),
-            "push_box_edge2": State([(did_drive_time(3000), "drive_straight3")], drive_back),
-            "!drive_straight3": State([(did_drive(15), "turn_right2")], drive_straight(DRIVE_SPEED)),
+            "push_box_edge2": State([(self.did_drive_time(3000), "drive_straight3")], drive_back),
+            "!drive_straight3": State([(self.did_drive(15), "turn_right2")], drive_straight(DRIVE_SPEED)),
             "!turn_right2": State([(did_turn(-Robot.ANGLE_FOR_90_DEGREES), "drive_back2")], turn(-TURN_RATE)),
-            "!drive_back2": State([(did_drive(-150), "turn_left3")], drive_back),
+            "!drive_back2": State([(self.did_drive(-150), "turn_left3")], drive_back),
             "!turn_left3": State([(did_turn(Robot.ANGLE_FOR_90_DEGREES), "drive_back3")], turn(TURN_RATE)),
-            "!drive_back3": State([(did_drive(-150), "turn_left4")], drive_back),
+            "!drive_back3": State([(self.did_drive(-150), "turn_left4")], drive_back),
             "!turn_left4": State([(did_turn(Robot.ANGLE_FOR_90_DEGREES), "push_box_corner")], turn(TURN_RATE)),
-            "!push_box_corner": State([(did_drive_time(3000), "drive_straight4")], drive_back),
-            "!drive_straight4": State([(did_drive(90), "turn_right3")], drive_straight(DRIVE_SPEED)),
+            "!push_box_corner": State([(self.did_drive_time(3000), "drive_straight4")], drive_back),
+            "!drive_straight4": State([(self.did_drive(90), "turn_right3")], drive_straight(DRIVE_SPEED)),
             "!turn_right3": State([(did_turn(-25), "drive_straight5")], turn(-TURN_RATE)),
-            "!drive_straight5": check_events([(did_drive(500), "turn_left5")], drive_straight(DRIVE_SPEED)),
+            "!drive_straight5": check_events([(self.did_drive(500), "turn_left5")], drive_straight(DRIVE_SPEED)),
             "!turn_left5": check_events([(did_turn(25), "done")], turn(TURN_RATE)),
         }, self.store_state)
 
@@ -406,12 +402,6 @@ class Robot:
                 delta = self.robot.angle() - self.prev_state[2]
                 return delta >= degrees if degrees > 0 else delta <= degrees
             return did_turn_degrees
-
-        def did_drive(distance_in_mm):
-            def did_drive_distance():
-                delta = self.robot.distance() - self.prev_state[0]
-                return delta >= distance_in_mm if distance_in_mm > 0 else delta <= distance_in_mm
-            return did_drive_distance
 
         def did_drive_time(time_in_ms):
             def did_drive_time():
