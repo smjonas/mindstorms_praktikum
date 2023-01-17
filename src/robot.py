@@ -89,6 +89,10 @@ class Robot:
             delta = self.robot.angle() - self.prev_state[2]
             return delta >= degrees if degrees > 0 else delta <= degrees
         return did_turn_degrees
+
+    def hit_rear(self):
+        return self.touch_sensor.pressed()
+
     # END CONDITION FUNCTIONS
 
     # Methods for stages of course
@@ -120,9 +124,6 @@ class Robot:
         def is_gray():
             brightness = self.color_sensor.reflection()
             return brightness > DARK and brightness < LIGHT
-
-        def hit_rear():
-            return self.touch_sensor.pressed()
 
         # Nonblocking methods to tell the robot what to do
         def turn(turn_rate):
@@ -182,7 +183,7 @@ class Robot:
             "!obst_5": State([(self.did_turn(-Robot.ANGLE_FOR_90_DEGREES), "obst_6")], turn(-SET_ANGLE_TURN_RATE)),
             "obst_6": State([(self.did_drive(172), "obst_7")], drive_straight),
             "!obst_7": State([(self.did_turn(Robot.ANGLE_FOR_90_DEGREES), "obst_8")], turn(SET_ANGLE_TURN_RATE)),
-            "obst_8": State([(hit_rear, "start")], drive_back)
+            "obst_8": State([(self.hit_rear, "start")], drive_back)
         }, self.store_state)
 
         cur_state = states["start"]
@@ -234,9 +235,6 @@ class Robot:
                 self.color_sensor_motor.run(speed)
             return swerve
 
-        def hit_rear():
-            return self.touch_sensor.pressed()
-
         def did_drive_time(time_in_ms):
             def did_drive_time():
                 delta = int(time.time() * 1000.0) - self.time
@@ -267,7 +265,7 @@ class Robot:
         states = resolve_stored_states({
             "start": State([(self.did_drive(200), "turn_right")], drive_straight(DRIVE_SPEED)),
             "!turn_right": State([(self.did_turn(-82), "drive_back")], turn(-TURN_RATE)),
-            "!drive_back": State([(hit_rear, "continue_driving_back")], drive_back),
+            "!drive_back": State([(self.hit_rear, "continue_driving_back")], drive_back),
             "!continue_driving_back": State([(self.did_drive_time(700), "drive_straight")], drive_back),
             "!drive_straight": State([(self.did_drive(5), "turn_left")], drive_straight(100)),
             "!turn_left": State([(self.did_turn(82), "drive_straight2")], turn(TURN_RATE)),
@@ -398,21 +396,18 @@ class Robot:
         def wall_detected():
             return self.dist_sensor.distance() < OBSTACLE_DISTANCE_THRESHOLD
 
-        def hit_rear():
-            return self.touch_sensor.pressed()
-
         def drive_back():
             self.robot.drive(-DRIVE_SPEED, 0)
             wait(WAIT_TIME)
 
         states = resolve_stored_states({
             "!start": State([(self.did_turn(Robot.ANGLE_FOR_90_DEGREES), "adjust_before_drive")], turn(TURN_RATE)),
-            "adjust_before_drive": State([(hit_rear, "continue_driving_back")], drive_back),
+            "adjust_before_drive": State([(self.hit_rear, "continue_driving_back")], drive_back),
             "!continue_driving_back": State([(did_drive_time(700), "check_wall_before_right")], drive_back),
             "check_wall_before_right": State([(wall_detected, "stop_and_turn_right")], drive_straight),
             "!stop_and_turn_right": State([(self.did_turn(-Robot.ANGLE_FOR_90_DEGREES), "turn_right_before_drive")], turn(-TURN_RATE)),
             "!turn_right_before_drive": State([(self.did_turn(-Robot.ANGLE_FOR_90_DEGREES), "adjust_before_drive2")], turn(-TURN_RATE)),
-            "adjust_before_drive2": State([(hit_rear, "continue_driving_back2")], drive_back),
+            "adjust_before_drive2": State([(self.hit_rear, "continue_driving_back2")], drive_back),
             "!continue_driving_back2": State([(did_drive_time(700), "check_wall_before_left")], drive_back),
             "check_wall_before_left": State([(wall_detected, "stop_and_turn_left")], drive_straight),
             "!stop_and_turn_left": State([(self.did_turn(Robot.ANGLE_FOR_90_DEGREES), "drive_before_left")], turn(TURN_RATE)),
