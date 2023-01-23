@@ -362,7 +362,8 @@ class Robot:
             self.time = int(time.time() * 1000.0)
 
         def wall_detected():
-            return self.dist_sensor.distance() < OBSTACLE_DISTANCE_THRESHOLD
+            angle = self.color_sensor_motor.angle()
+            return self.dist_sensor.distance() < OBSTACLE_DISTANCE_THRESHOLD and angle < 45
 
         states = resolve_stored_states(
             {
