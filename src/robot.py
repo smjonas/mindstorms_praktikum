@@ -68,12 +68,12 @@ class Robot:
         self.log("Stage " + str(self.course.selected_stage + 1) + " started")
         self.stage_fns[self.course.selected_stage](self)
 
-    def level_loop(self, states, callback):
+    def level_loop(self, states, callback=None):
         cur_state = states["start"]
         cur_state.on_enter()
 
         while not self.course.should_abort():
-            if callback() == True:
+            if callback is not None and callback() == True:
                 return
             successor = cur_state.check_conditions()
             if successor:
