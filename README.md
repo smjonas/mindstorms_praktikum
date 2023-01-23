@@ -89,9 +89,15 @@ reamd
 - Werte für Paket-Level angepasst
 - bei Hindernis Distanzen angepasst
 
+### 23.01.23
+- behebe Probleme im Farbfeld-Level: gegenüberliegende Wand wird nun nicht mehr erkannt
+  wenn der Motor zur Seite hin ausgerichtet ist
+- Refactoring: extrahiere on_enter und Bedingungen der Zustände als Methoden der
+  Robot-Klasse
+- Verbesserte Logik beim Paket-Level
+- Implementierung des Brücken-Levels
+
 TODO:
-- rename SET_DISTANCE_DRIVE_SPEED
-- use absolute values in did_drive
-- extract did_drive, did_turn, etc. functions to extra file
-- align before driving around obstacle
-- align before pushing box
+- rename did_x to xed?
+- better state names?
+- extract check_level_state
