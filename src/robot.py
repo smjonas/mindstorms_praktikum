@@ -68,6 +68,23 @@ class Robot:
         self.log("Stage " + str(self.course.selected_stage + 1) + " started")
         self.stage_fns[self.course.selected_stage](self)
 
+    def level_loop(self, states, callback):
+        cur_state = states["start"]
+        cur_state.on_enter()
+
+        while not self.course.should_abort():
+            if callback() == True:
+                return
+            successor = cur_state.check_conditions()
+            if successor:
+                cur_state = states.get(successor, successor)
+                if cur_state == Robot.NEXT_LEVEL_STATE:
+                    self.stop()
+                    return
+
+                if cur_state.on_enter:
+                    cur_state.on_enter()
+
     def check_blueline(self):
         r, g, b = self.color_sensor.rgb()
         return b >= 29 and g < 30 and r < 10
@@ -101,7 +118,8 @@ class Robot:
                 self.color_sensor_motor.hold()
                 return True
             return False
-        return did_swerve_angle    
+        return did_swerve_angle
+
     # END CONDITION FUNCTIONS
 
     # BEGIN ON_ENTER FUNCTIONS
@@ -196,7 +214,10 @@ class Robot:
                 "!obst_1": State([(self.did_turn(Robot.ANGLE_FOR_90_DEGREES), "obst_2")], self.turn(SET_ANGLE_TURN_RATE)),
                 "obst_2": State([(self.did_drive(172), "obst_3")], self.drive_straight(DRIVE_SPEED)),
                 # Not just angle for 90 degrees to make sure we do not crash into the obstacle
-                "!obst_3": State([(self.did_turn(-Robot.ANGLE_FOR_90_DEGREES + 4), "obst_4")], self.turn(-SET_ANGLE_TURN_RATE)),
+                "!obst_3": State(
+                    [(self.did_turn(-Robot.ANGLE_FOR_90_DEGREES + 4), "obst_4")],
+                    self.turn(-SET_ANGLE_TURN_RATE),
+                ),
                 "obst_4": State([(self.did_drive(420), "obst_5")], self.drive_straight(DRIVE_SPEED)),
                 "!obst_5": State([(self.did_turn(-Robot.ANGLE_FOR_90_DEGREES), "obst_6")], self.turn(-SET_ANGLE_TURN_RATE)),
                 "obst_6": State([(self.did_drive(172), "obst_7")], self.drive_straight(DRIVE_SPEED)),
@@ -206,21 +227,7 @@ class Robot:
             self.store_state,
         )
 
-        cur_state = states["start"]
-
-        # Actual loop for this stage
-        while not self.course.should_abort():
-            successor = cur_state.check_conditions()
-            if successor:
-                cur_state = states.get(successor, successor)
-                if cur_state == Robot.NEXT_LEVEL_STATE:
-                    self.stop()
-                    # self.course.running = False
-                    self.log("Reached end of line")
-                    return
-
-                if cur_state.on_enter:
-                    cur_state.on_enter()
+        self.level_loop(states)
         self.robot.stop()
 
     # Stage 2: Push a block in the corner
@@ -259,7 +266,6 @@ class Robot:
                 "!continue_driving_back2": State([(self.did_drive_time(1000), "drive_straight3")], self.drive_back(DRIVE_SPEED)),
                 "!drive_straight3": State([(self.did_drive(5), "turn_left2")], self.drive_straight(100)),
                 "!turn_left2": State([(self.did_turn(82), "search")], self.turn(TURN_RATE)),
-
                 "!search": State([(box_detected, "search2")], self.drive_straight(BOX_SEARCH_SPEED)),
                 "!search2": State([(box_detected, "drive_next_to_box")], self.drive_straight(BOX_SEARCH_SPEED)),
                 "!drive_next_to_box": State([(self.did_drive(180), "turn_left3")], self.drive_straight(DRIVE_SPEED)),
@@ -272,35 +278,21 @@ class Robot:
                 "!drive_back3": State([(self.did_drive(-150), "turn_left4")], self.drive_back(DRIVE_SPEED)),
                 "!turn_left4": State([(self.did_turn(Robot.ANGLE_FOR_90_DEGREES), "drive_back4")], self.turn(TURN_RATE)),
                 "!drive_back4": State([(self.hit_rear, "continue_driving_back3")], self.drive_back(DRIVE_SPEED)),
-
                 # Align before pushing box
                 "!continue_driving_back3": State([(self.did_drive_time(700), "drive_straight5")], self.drive_back(DRIVE_SPEED)),
                 "!drive_straight5": State([(self.did_drive(5), "turn_left5")], self.drive_straight(50)),
-
                 "!turn_left5": State([(self.did_turn(Robot.ANGLE_FOR_90_DEGREES), "push_box_corner")], self.turn(TURN_RATE)),
                 "!push_box_corner": State([(self.did_drive_time(3000), "drive_straight6")], self.drive_back(DRIVE_SPEED)),
                 "!drive_straight6": State([(self.did_drive(90), "turn_right4")], self.drive_straight(DRIVE_SPEED)),
                 "!turn_right4": State([(self.did_turn(-22), "drive_straight7")], self.turn(-TURN_RATE)),
-                "!drive_straight7": check_events([(self.did_drive(500), Robot.NEXT_LEVEL_STATE)], self.drive_straight(DRIVE_SPEED)),
+                "!drive_straight7": check_events(
+                    [(self.did_drive(500), Robot.NEXT_LEVEL_STATE)], self.drive_straight(DRIVE_SPEED)
+                ),
             },
             self.store_state,
         )
 
-        cur_state = states["start"]
-        self.store_state()
-        self.drive_straight(DRIVE_SPEED)()
-
-        # Actual loop for this stage
-        while not self.course.should_abort():
-            successor = cur_state.check_conditions()
-            if successor:
-                cur_state = states.get(successor, successor)
-                if cur_state == Robot.NEXT_LEVEL_STATE:
-                    self.stop()
-                    return
-
-                if cur_state.on_enter:
-                    cur_state.on_enter()
+        self.level_loop(states)
         self.stop()
 
     # Stage 3: Cross a bridge with perpendicular ramps leading up/down at the ends
@@ -322,7 +314,8 @@ class Robot:
             ]
             return State(new_transitions + transitions, on_enter)
 
-        states = resolve_stored_states({
+        states = resolve_stored_states(
+            {
                 "!start": State([(self.did_turn(22), "drive_to_bright_wood")], self.turn(TURN_RATE)),
                 "!drive_to_bright_wood": State([(see_bright_wood, "drive_straight")], self.drive_straight(100)),
                 "!drive_straight": State([(self.did_drive(200), "drive_to_void")], self.drive_straight(DRIVE_SPEED)),
@@ -337,22 +330,8 @@ class Robot:
             self.store_state,
         )
 
-        cur_state = states["start"]
-        self.store_state()
-        self.turn(TURN_RATE)()
-        while not self.course.should_abort():
-            successor = cur_state.check_conditions()
-            if successor:
-                self.log(successor)
-                cur_state = states.get(successor, successor)
-                if cur_state == Robot.NEXT_LEVEL_STATE:
-                    self.stop()
-                    return
-
-                if cur_state.on_enter:
-                    cur_state.on_enter()
+        self.level_loop(states)
         self.stop()
-
 
     # Stage 4: Find a red and white patch of color on the floor
     def field(self):
@@ -402,21 +381,31 @@ class Robot:
         states = resolve_stored_states(
             {
                 "!start": State([(self.did_drive(-30), "turn_right")], self.drive_back(DRIVE_SPEED)),
-                "!turn_right": State([(self.did_turn(-Robot.ANGLE_FOR_90_DEGREES), "adjust_before_drive")], self.turn(-TURN_RATE)),
+                "!turn_right": State(
+                    [(self.did_turn(-Robot.ANGLE_FOR_90_DEGREES), "adjust_before_drive")],
+                    self.turn(-TURN_RATE),
+                ),
                 "adjust_before_drive": State([(self.hit_rear, "continue_driving_back")], self.drive_back(DRIVE_SPEED)),
-                "!continue_driving_back": State([(self.did_drive_time(700), "check_wall_before_right")], self.drive_back(DRIVE_SPEED)),
+                "!continue_driving_back": State(
+                    [(self.did_drive_time(700), "check_wall_before_right")], self.drive_back(DRIVE_SPEED)
+                ),
                 "check_wall_before_right": State([(wall_detected, "stop_and_turn_right")], self.drive_straight(DRIVE_SPEED)),
                 "!stop_and_turn_right": State(
                     [(self.did_turn(-Robot.ANGLE_FOR_90_DEGREES), "turn_right_before_drive")],
                     self.turn(-TURN_RATE),
                 ),
                 "!turn_right_before_drive": State(
-                    [(self.did_turn(-Robot.ANGLE_FOR_90_DEGREES), "adjust_before_drive2")], self.turn(-TURN_RATE)
+                    [(self.did_turn(-Robot.ANGLE_FOR_90_DEGREES), "adjust_before_drive2")],
+                    self.turn(-TURN_RATE),
                 ),
                 "adjust_before_drive2": State([(self.hit_rear, "continue_driving_back2")], self.drive_back(DRIVE_SPEED)),
-                "!continue_driving_back2": State([(self.did_drive_time(700), "check_wall_before_left")], self.drive_back(DRIVE_SPEED)),
+                "!continue_driving_back2": State(
+                    [(self.did_drive_time(700), "check_wall_before_left")], self.drive_back(DRIVE_SPEED)
+                ),
                 "check_wall_before_left": State([(wall_detected, "stop_and_turn_left")], self.drive_straight(DRIVE_SPEED)),
-                "!stop_and_turn_left": State([(self.did_turn(Robot.ANGLE_FOR_90_DEGREES), "drive_before_left")], self.turn(TURN_RATE)),
+                "!stop_and_turn_left": State(
+                    [(self.did_turn(Robot.ANGLE_FOR_90_DEGREES), "drive_before_left")], self.turn(TURN_RATE)
+                ),
                 "!drive_before_left": State([(self.did_drive(SHORT_DRIVE_DISTANCE), "start")], self.drive_straight(DRIVE_SPEED)),
                 "!turn_left": State([(self.did_turn(Robot.ANGLE_FOR_90_DEGREES), "adjust_before_drive")], self.turn(TURN_RATE)),
             },
@@ -424,19 +413,14 @@ class Robot:
         )
 
         cur_state = states["start"]
-        store_state()
-        self.drive_back(DRIVE_SPEED)()
-        # Actual loop for this stage
-        while not self.course.should_abort():
+        cur_state.on_enter()
+
+        def callback():
             swerve_color_sensor()
             check_colors()
             if self.found_red and self.found_white:
                 self.course.running = False
-                break
-            successor = cur_state.check_conditions()
-            if successor:
-                self.log("CUR STATE " + successor)
-                cur_state = states[successor]
-                if cur_state.on_enter:
-                    cur_state.on_enter()
+                return True
+
+        self.level_loop(states, callback)
         self.stop()
