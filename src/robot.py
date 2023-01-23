@@ -68,6 +68,23 @@ class Robot:
         self.log("Stage " + str(self.course.selected_stage + 1) + " started")
         self.stage_fns[self.course.selected_stage](self)
 
+    def level_loop(self, states, callback):
+        cur_state = states["start"]
+        cur_state.on_enter()
+
+        while not self.course.should_abort():
+            if callback() == True:
+                return
+            successor = cur_state.check_conditions()
+            if successor:
+                cur_state = states.get(successor, successor)
+                if cur_state == Robot.NEXT_LEVEL_STATE:
+                    self.stop()
+                    return
+
+                if cur_state.on_enter:
+                    cur_state.on_enter()
+
     def check_blueline(self):
         r, g, b = self.color_sensor.rgb()
         return b >= 29 and g < 30 and r < 10
@@ -93,6 +110,16 @@ class Robot:
 
     def hit_rear(self):
         return self.touch_sensor.pressed()
+
+    def did_swerve_angle(self, angle):
+        def did_swerve_angle():
+            delta = self.color_sensor_motor.angle() - self.swerve_angle
+            if (angle > 0 and delta >= angle) or (angle <= 0 and delta <= angle):
+                self.color_sensor_motor.hold()
+                return True
+            return False
+        return did_swerve_angle
+
     # END CONDITION FUNCTIONS
 
     # BEGIN ON_ENTER FUNCTIONS
@@ -110,6 +137,11 @@ class Robot:
             self.robot.drive(0, turn_rate)
             wait(Robot.WAIT_TIME)
         return turn_angle
+
+    def swerve(self, speed):
+        def swerve():
+            self.color_sensor_motor.run(speed)
+        return swerve
     # END ON_ENTER FUNCTIONS
 
     # Methods for stages of course
@@ -182,7 +214,10 @@ class Robot:
                 "!obst_1": State([(self.did_turn(Robot.ANGLE_FOR_90_DEGREES), "obst_2")], self.turn(SET_ANGLE_TURN_RATE)),
                 "obst_2": State([(self.did_drive(172), "obst_3")], self.drive_straight(DRIVE_SPEED)),
                 # Not just angle for 90 degrees to make sure we do not crash into the obstacle
-                "!obst_3": State([(self.did_turn(-Robot.ANGLE_FOR_90_DEGREES + 4), "obst_4")], self.turn(-SET_ANGLE_TURN_RATE)),
+                "!obst_3": State(
+                    [(self.did_turn(-Robot.ANGLE_FOR_90_DEGREES + 4), "obst_4")],
+                    self.turn(-SET_ANGLE_TURN_RATE),
+                ),
                 "obst_4": State([(self.did_drive(420), "obst_5")], self.drive_straight(DRIVE_SPEED)),
                 "!obst_5": State([(self.did_turn(-Robot.ANGLE_FOR_90_DEGREES), "obst_6")], self.turn(-SET_ANGLE_TURN_RATE)),
                 "obst_6": State([(self.did_drive(172), "obst_7")], self.drive_straight(DRIVE_SPEED)),
@@ -192,21 +227,7 @@ class Robot:
             self.store_state,
         )
 
-        cur_state = states["start"]
-
-        # Actual loop for this stage
-        while not self.course.should_abort():
-            successor = cur_state.check_conditions()
-            if successor:
-                cur_state = states.get(successor, successor)
-                if cur_state == Robot.NEXT_LEVEL_STATE:
-                    self.stop()
-                    # self.course.running = False
-                    self.log("Reached end of line")
-                    return
-
-                if cur_state.on_enter:
-                    cur_state.on_enter()
+        self.level_loop(states)
         self.robot.stop()
 
     # Stage 2: Push a block in the corner
@@ -217,20 +238,6 @@ class Robot:
         SWERVE_SPEED = 60
         MAX_BOX_DISTANCE = 340
         BOX_SEARCH_SPEED = 100
-
-        def swerve(speed):
-            def swerve():
-                self.color_sensor_motor.run(speed)
-            return swerve
-
-        def did_swerve_angle(angle):
-            def did_swerve_angle():
-                delta = self.color_sensor_motor.angle() - self.swerve_angle
-                if (angle > 0 and delta >= angle) or (angle <= 0 and delta <= angle):
-                    self.color_sensor_motor.hold()
-                    return True
-                return False
-            return did_swerve_angle
 
         def box_detected():
             dist = self.dist_sensor.distance()
@@ -252,83 +259,79 @@ class Robot:
                 "!drive_straight": State([(self.did_drive(5), "turn_left")], self.drive_straight(100)),
                 "!turn_left": State([(self.did_turn(81), "drive_straight2")], self.turn(TURN_RATE)),
                 "!drive_straight2": State([(self.did_drive(400), "turn_us_sensor")], self.drive_straight(DRIVE_SPEED)),
-                "!turn_us_sensor": State([(did_swerve_angle(110), "turn_right2")], swerve(SWERVE_SPEED)),
+                "!turn_us_sensor": State([(self.did_swerve_angle(110), "turn_right2")], self.swerve(SWERVE_SPEED)),
                 # Align at wall before searching for box
                 "!turn_right2": State([(self.did_turn(-82), "drive_back2")], self.turn(-TURN_RATE)),
                 "!drive_back2": State([(self.hit_rear, "continue_driving_back2")], self.drive_back(DRIVE_SPEED)),
                 "!continue_driving_back2": State([(self.did_drive_time(1000), "drive_straight3")], self.drive_back(DRIVE_SPEED)),
                 "!drive_straight3": State([(self.did_drive(5), "turn_left2")], self.drive_straight(100)),
                 "!turn_left2": State([(self.did_turn(82), "search")], self.turn(TURN_RATE)),
-
                 "!search": State([(box_detected, "search2")], self.drive_straight(BOX_SEARCH_SPEED)),
                 "!search2": State([(box_detected, "drive_next_to_box")], self.drive_straight(BOX_SEARCH_SPEED)),
-                "!drive_next_to_box": State([(self.did_drive(200), "turn_left3")], self.drive_straight(DRIVE_SPEED)),
+                "!drive_next_to_box": State([(self.did_drive(180), "turn_left3")], self.drive_straight(DRIVE_SPEED)),
                 "!turn_left3": State([(self.did_turn(86), "push_box_edge1")], self.turn(TURN_RATE)),
                 "!push_box_edge1": State([(self.did_drive_time(0), "turn_sensor_back")], self.drive_back(DRIVE_SPEED)),
-                "turn_sensor_back": State([(did_swerve_angle(-110), "push_box_edge2")], swerve(-SWERVE_SPEED)),
+                "turn_sensor_back": State([(self.did_swerve_angle(-110), "push_box_edge2")], self.swerve(-SWERVE_SPEED)),
                 "push_box_edge2": State([(self.did_drive_time(3000), "drive_straight4")], self.drive_back(DRIVE_SPEED)),
                 "!drive_straight4": State([(self.did_drive(15), "turn_right3")], self.drive_straight(DRIVE_SPEED)),
                 "!turn_right3": State([(self.did_turn(-Robot.ANGLE_FOR_90_DEGREES), "drive_back3")], self.turn(-TURN_RATE)),
                 "!drive_back3": State([(self.did_drive(-150), "turn_left4")], self.drive_back(DRIVE_SPEED)),
                 "!turn_left4": State([(self.did_turn(Robot.ANGLE_FOR_90_DEGREES), "drive_back4")], self.turn(TURN_RATE)),
                 "!drive_back4": State([(self.hit_rear, "continue_driving_back3")], self.drive_back(DRIVE_SPEED)),
-
                 # Align before pushing box
                 "!continue_driving_back3": State([(self.did_drive_time(700), "drive_straight5")], self.drive_back(DRIVE_SPEED)),
-                "!drive_straight5": State([(self.did_drive(5), "turn_left5")], self.drive_straight(100)),
-
+                "!drive_straight5": State([(self.did_drive(5), "turn_left5")], self.drive_straight(50)),
                 "!turn_left5": State([(self.did_turn(Robot.ANGLE_FOR_90_DEGREES), "push_box_corner")], self.turn(TURN_RATE)),
                 "!push_box_corner": State([(self.did_drive_time(3000), "drive_straight6")], self.drive_back(DRIVE_SPEED)),
                 "!drive_straight6": State([(self.did_drive(90), "turn_right4")], self.drive_straight(DRIVE_SPEED)),
-                "!turn_right4": State([(self.did_turn(-25), "drive_straight7")], self.turn(-TURN_RATE)),
-                "!drive_straight7": check_events([(self.did_drive(500), "turn_left6")], self.drive_straight(DRIVE_SPEED)),
-                "!turn_left6": check_events([(self.did_turn(25), "done")], self.turn(TURN_RATE)),
+                "!turn_right4": State([(self.did_turn(-22), "drive_straight7")], self.turn(-TURN_RATE)),
+                "!drive_straight7": check_events(
+                    [(self.did_drive(500), Robot.NEXT_LEVEL_STATE)], self.drive_straight(DRIVE_SPEED)
+                ),
             },
             self.store_state,
         )
 
-        cur_state = states["start"]
-        self.store_state()
-        self.drive_straight(DRIVE_SPEED)()
-
-        # Actual loop for this stage
-        while not self.course.should_abort():
-            successor = cur_state.check_conditions()
-            if successor:
-                cur_state = states.get(successor, successor)
-                if cur_state == Robot.NEXT_LEVEL_STATE:
-                    self.stop()
-                    # while True:
-                    #    pass
-                    self.robot.turn(25)
-                    self.robot.straight(1000)
-                    self.course.running = False
-                    return
-
-                if cur_state.on_enter:
-                    cur_state.on_enter()
+        self.level_loop(states)
         self.stop()
 
     # Stage 3: Cross a bridge with perpendicular ramps leading up/down at the ends
     def bridge(self):
-        self.store_state()
-        self.robot.drive(0, -8)
-        values = ""
-        # with open("./values.txt", "w+") as writer:
-        i = 1
-        # prev = self.dist_sensor.distance()
-        while self.prev_state[2] - self.robot.angle() < 90:
-            dist = self.dist_sensor.distance()
-            values += str(i) + "," + str(dist) + " "
-            i += 1
-            wait(50)
-            # delta = dist - prev
-            # if delta > 0:
-            #    self.log("bigger" + str((delta / float(prev)) * 100.0))
-            # elif delta < 0:
-            #    self.log("smaller" + str((-delta / float(prev)) * 100.0))
-            # prev = dist
-        print(values)
+        DRIVE_SPEED = 300
+        TURN_RATE = 70
+
+        def see_bright_wood():
+            brightness = self.color_sensor.reflection()
+            return brightness > 20 and brightness < 40
+
+        def see_void():
+            brightness = self.color_sensor.reflection()
+            return brightness <= 0
+
+        def check_events(transitions, on_enter=None):
+            new_transitions = [
+                (self.check_blueline, Robot.NEXT_LEVEL_STATE),
+            ]
+            return State(new_transitions + transitions, on_enter)
+
+        states = resolve_stored_states(
+            {
+                "!start": State([(self.did_turn(22), "drive_to_bright_wood")], self.turn(TURN_RATE)),
+                "!drive_to_bright_wood": State([(see_bright_wood, "drive_straight")], self.drive_straight(100)),
+                "!drive_straight": State([(self.did_drive(200), "drive_to_void")], self.drive_straight(DRIVE_SPEED)),
+                "!drive_to_void": State([(see_void, "drive_back")], self.drive_straight(DRIVE_SPEED)),
+                "!drive_back": State([(self.did_drive(-30), "turn_left")], self.drive_back(DRIVE_SPEED)),
+                "!turn_left": State([(self.did_turn(80), "cross_bridge")], self.turn(TURN_RATE)),
+                "!cross_bridge": State([(see_void, "drive_back2")], self.drive_straight(DRIVE_SPEED)),
+                "!drive_back2": State([(self.did_drive(-30), "turn_right")], self.drive_back(DRIVE_SPEED)),
+                "!turn_right": State([(self.did_turn(-80), "drive_back3")], self.turn(-TURN_RATE)),
+                "!drive_back3": check_events([(self.did_drive(-1200), Robot.NEXT_LEVEL_STATE)], self.drive_back(100)),
+            },
+            self.store_state,
+        )
+
+        self.level_loop(states)
+        self.stop()
 
     # Stage 4: Find a red and white patch of color on the floor
     def field(self):
@@ -377,40 +380,47 @@ class Robot:
 
         states = resolve_stored_states(
             {
-                "!start": State([(self.did_turn(Robot.ANGLE_FOR_90_DEGREES), "adjust_before_drive")], self.turn(TURN_RATE)),
+                "!start": State([(self.did_drive(-30), "turn_right")], self.drive_back(DRIVE_SPEED)),
+                "!turn_right": State(
+                    [(self.did_turn(-Robot.ANGLE_FOR_90_DEGREES), "adjust_before_drive")],
+                    self.turn(-TURN_RATE),
+                ),
                 "adjust_before_drive": State([(self.hit_rear, "continue_driving_back")], self.drive_back(DRIVE_SPEED)),
-                "!continue_driving_back": State([(self.did_drive_time(700), "check_wall_before_right")], self.drive_back(DRIVE_SPEED)),
+                "!continue_driving_back": State(
+                    [(self.did_drive_time(700), "check_wall_before_right")], self.drive_back(DRIVE_SPEED)
+                ),
                 "check_wall_before_right": State([(wall_detected, "stop_and_turn_right")], self.drive_straight(DRIVE_SPEED)),
                 "!stop_and_turn_right": State(
                     [(self.did_turn(-Robot.ANGLE_FOR_90_DEGREES), "turn_right_before_drive")],
                     self.turn(-TURN_RATE),
                 ),
                 "!turn_right_before_drive": State(
-                    [(self.did_turn(-Robot.ANGLE_FOR_90_DEGREES), "adjust_before_drive2")], self.turn(-TURN_RATE)
+                    [(self.did_turn(-Robot.ANGLE_FOR_90_DEGREES), "adjust_before_drive2")],
+                    self.turn(-TURN_RATE),
                 ),
                 "adjust_before_drive2": State([(self.hit_rear, "continue_driving_back2")], self.drive_back(DRIVE_SPEED)),
-                "!continue_driving_back2": State([(self.did_drive_time(700), "check_wall_before_left")], self.drive_back(DRIVE_SPEED)),
+                "!continue_driving_back2": State(
+                    [(self.did_drive_time(700), "check_wall_before_left")], self.drive_back(DRIVE_SPEED)
+                ),
                 "check_wall_before_left": State([(wall_detected, "stop_and_turn_left")], self.drive_straight(DRIVE_SPEED)),
-                "!stop_and_turn_left": State([(self.did_turn(Robot.ANGLE_FOR_90_DEGREES), "drive_before_left")], self.turn(TURN_RATE)),
+                "!stop_and_turn_left": State(
+                    [(self.did_turn(Robot.ANGLE_FOR_90_DEGREES), "drive_before_left")], self.turn(TURN_RATE)
+                ),
                 "!drive_before_left": State([(self.did_drive(SHORT_DRIVE_DISTANCE), "start")], self.drive_straight(DRIVE_SPEED)),
+                "!turn_left": State([(self.did_turn(Robot.ANGLE_FOR_90_DEGREES), "adjust_before_drive")], self.turn(TURN_RATE)),
             },
             self.store_state,
         )
 
         cur_state = states["start"]
-        store_state()
+        cur_state.on_enter()
 
-        # Actual loop for this stage
-        while not self.course.should_abort():
+        def callback():
             swerve_color_sensor()
             check_colors()
             if self.found_red and self.found_white:
                 self.course.running = False
-                break
-            successor = cur_state.check_conditions()
-            if successor:
-                self.log("CUR STATE " + successor)
-                cur_state = states[successor]
-                if cur_state.on_enter:
-                    cur_state.on_enter()
+                return True
+
+        self.level_loop(states, callback)
         self.stop()
