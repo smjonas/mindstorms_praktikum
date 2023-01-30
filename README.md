@@ -97,7 +97,11 @@ reamd
 - Verbesserte Logik beim Paket-Level
 - Implementierung des Brücken-Levels
 
+### 30.01.23
+
 TODO:
 - rename did_x to xed?
 - better state names?
 - extract check_level_state
+- use True instead of did_drive(0)
+- add third argument to state constructor for debugging
