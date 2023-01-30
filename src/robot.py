@@ -205,10 +205,10 @@ class Robot:
                     ],
                     self.turn(-ON_LINE_TURN_RATE),
                 ),
-                "!turn_back_left": State([(self.did_turn(GAP_TURNBACK_ANGLE), "self.drive_straight")], self.turn(SET_ANGLE_TURN_RATE)),
-                "!self.drive_straight": check_events(
+                "!turn_back_left": State([(self.did_turn(GAP_TURNBACK_ANGLE), "drive_straight")], self.turn(100)),
+                "!drive_straight": check_events(
                     [(is_gray, "start"), (is_light, "start"), (self.did_drive(120), "start")],
-                    self.drive_straight(DRIVE_SPEED),
+                    self.drive_straight(70),
                 ),
                 # TODO: vor obst1 schon einmal an obstacle ausrichten
                 "!obst_1": State([(self.did_turn(Robot.ANGLE_FOR_90_DEGREES), "obst_2")], self.turn(SET_ANGLE_TURN_RATE)),
