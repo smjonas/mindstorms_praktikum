@@ -3,7 +3,7 @@ import time
 from pybricks.ev3devices import (ColorSensor, Motor, TouchSensor,
                                  UltrasonicSensor)
 from pybricks.hubs import EV3Brick
-from pybricks.parameters import Port, Stop
+from pybricks.parameters import Port
 from pybricks.robotics import DriveBase
 from pybricks.tools import wait
 
@@ -78,6 +78,7 @@ class Robot:
             successor = cur_state.check_conditions()
             if successor:
                 cur_state = states.get(successor, successor)
+                self.log(successor)
                 if cur_state == Robot.NEXT_LEVEL_STATE:
                     self.stop()
                     return
@@ -252,7 +253,7 @@ class Robot:
         self.stop()
         states = resolve_stored_states(
             {
-                "start": State([(self.did_drive(200), "turn_right")], self.drive_straight(DRIVE_SPEED)),
+                "!start": State([(self.did_drive(200), "turn_right")], self.drive_straight(DRIVE_SPEED)),
                 "!turn_right": State([(self.did_turn(-82), "drive_back")], self.turn(-TURN_RATE)),
                 "!drive_back": State([(self.hit_rear, "continue_driving_back")], self.drive_back(DRIVE_SPEED)),
                 "!continue_driving_back": State([(self.did_drive_time(700), "drive_straight")], self.drive_back(DRIVE_SPEED)),
@@ -297,7 +298,7 @@ class Robot:
 
     # Stage 3: Cross a bridge with perpendicular ramps leading up/down at the ends
     def bridge(self):
-        DRIVE_SPEED = 300
+        DRIVE_SPEED = 150
         TURN_RATE = 70
 
         def see_bright_wood():
@@ -314,18 +315,37 @@ class Robot:
             ]
             return State(new_transitions + transitions, on_enter)
 
+        def drive_left_curve():
+            self.robot.drive(DRIVE_SPEED, 2)
+            wait(Robot.WAIT_TIME)
+
         states = resolve_stored_states(
             {
-                "!start": State([(self.did_turn(22), "drive_to_bright_wood")], self.turn(TURN_RATE)),
-                "!drive_to_bright_wood": State([(see_bright_wood, "drive_straight")], self.drive_straight(100)),
+                "!start": State([(self.did_turn(22), "start_driving")], self.turn(TURN_RATE)),
+                "!start_driving": State([(True, "turn_color_sensor")], drive_left_curve),
+                "!turn_color_sensor": State([(self.did_swerve_angle(70), "drive_to_bright_wood")], self.swerve(300)),
+                "drive_to_bright_wood": State([(see_bright_wood, "drive_straight"), (see_void, "turn_right1")], drive_left_curve),
+
+                "!turn_right1": State([(self.did_turn(-13), "drive_to_bright_wood")], self.turn(-TURN_RATE)),
+
                 "!drive_straight": State([(self.did_drive(200), "drive_to_void")], self.drive_straight(DRIVE_SPEED)),
                 "!drive_to_void": State([(see_void, "drive_back")], self.drive_straight(DRIVE_SPEED)),
                 "!drive_back": State([(self.did_drive(-30), "turn_left")], self.drive_back(DRIVE_SPEED)),
                 "!turn_left": State([(self.did_turn(80), "cross_bridge")], self.turn(TURN_RATE)),
-                "!cross_bridge": State([(see_void, "drive_back2")], self.drive_straight(DRIVE_SPEED)),
-                "!drive_back2": State([(self.did_drive(-30), "turn_right")], self.drive_back(DRIVE_SPEED)),
-                "!turn_right": State([(self.did_turn(-80), "drive_back3")], self.turn(-TURN_RATE)),
-                "!drive_back3": check_events([(self.did_drive(-1200), Robot.NEXT_LEVEL_STATE)], self.drive_back(100)),
+                "!cross_bridge": State([(see_void, "turn_right2")], drive_left_curve),
+
+                "!turn_right2": State([(self.did_turn(-13), "check_void")], self.turn(-TURN_RATE)),
+                "check_void": State([(see_void, "drive_back2"), (True, "cross_bridge")], None),
+
+                "!drive_back2": State([(self.did_drive(-40), "turn_left2")], self.drive_back(DRIVE_SPEED)),
+                "!turn_left2": State([(self.did_turn(105), "drive_straight2")], self.turn(TURN_RATE)),
+                
+                "!drive_straight2": State([(self.did_drive(250), "drive_straight3")], self.drive_straight(DRIVE_SPEED)),
+                "!drive_straight3": State([(see_void, "turn_right3"), (self.did_drive(300), "start_driving2")], drive_left_curve),
+                "!turn_right3": State([(self.did_turn(-13), "start_driving2")], self.turn(-TURN_RATE)),
+                "!start_driving2": State([(True, "turn_back_color_sensor")], drive_left_curve),
+                "!turn_back_color_sensor": State([(self.did_swerve_angle(-70), "drive_straight4")], self.swerve(-300)),
+                "!drive_straight4": check_events([(self.did_drive(600), Robot.NEXT_LEVEL_STATE)], self.drive_straight(DRIVE_SPEED)),
             },
             self.store_state,
         )
