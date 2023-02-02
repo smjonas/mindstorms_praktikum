@@ -103,10 +103,7 @@ reamd
 - Werte beim Paket-Level angepasst
 
 TODO:
-- rename did_x to xed?
 - better state names?
 - extract check_level_state
-- use True instead of did_drive(0)
 - add third argument to state constructor for debugging
 - PID-Regler fürs Linienfahren
-- Übergang von Brücke -> Color Field anpassen
