@@ -25,7 +25,6 @@ def resolve_stored_states(states, on_enter_cb):
 
 class Robot:
     WAIT_TIME = 5
-    ANGLE_FOR_90_DEGREES = 84
     NEXT_LEVEL_STATE = "next_level"
 
     def __init__(self, course):
@@ -91,35 +90,35 @@ class Robot:
         return b >= 29 and g < 30 and r < 10
 
     # BEGIN CONDITION FUNCTIONS
-    def did_drive(self, distance_in_mm):
-        def did_drive_distance():
+    def drove_distance(self, distance_in_mm):
+        def drove_distance():
             delta = self.robot.distance() - self.prev_state[0]
             return delta >= distance_in_mm if distance_in_mm > 0 else delta <= distance_in_mm
-        return did_drive_distance
+        return drove_distance
 
-    def did_drive_time(self, time_in_ms):
-        def did_drive_time():
+    def drove_time(self, time_in_ms):
+        def drove_time():
             delta = int(time.time() * 1000.0) - self.time
             return delta >= time_in_ms
-        return did_drive_time
+        return drove_time
 
-    def did_turn(self, degrees):
-        def did_turn_degrees():
+    def turned_degrees(self, degrees):
+        def turned_degrees():
             delta = self.robot.angle() - self.prev_state[2]
             return delta >= degrees if degrees > 0 else delta <= degrees
-        return did_turn_degrees
+        return turned_degrees
 
     def hit_rear(self):
         return self.touch_sensor.pressed()
 
-    def did_swerve_angle(self, angle):
-        def did_swerve_angle():
+    def swerved_angle(self, angle):
+        def swerved_angle():
             delta = self.color_sensor_motor.angle() - self.swerve_angle
             if (angle > 0 and delta >= angle) or (angle <= 0 and delta <= angle):
                 self.color_sensor_motor.hold()
                 return True
             return False
-        return did_swerve_angle
+        return swerved_angle
 
     # END CONDITION FUNCTIONS
 
@@ -201,27 +200,27 @@ class Robot:
                 "!turn_right": check_events(
                     [
                         (is_gray, "drive_regulated"),
-                        (self.did_turn(-Robot.ANGLE_FOR_90_DEGREES), "turn_back_left"),
+                        (self.turned_degrees(-84), "turn_back_left"),
                     ],
                     self.turn(-ON_LINE_TURN_RATE),
                 ),
-                "!turn_back_left": State([(self.did_turn(GAP_TURNBACK_ANGLE), "drive_straight")], self.turn(100)),
+                "!turn_back_left": State([(self.turned_degrees(GAP_TURNBACK_ANGLE), "drive_straight")], self.turn(100)),
                 "!drive_straight": check_events(
-                    [(is_gray, "start"), (is_light, "start"), (self.did_drive(130), "start")],
+                    [(is_gray, "start"), (is_light, "start"), (self.drove_distance(130), "start")],
                     self.drive_straight(70),
                 ),
                 # TODO: vor obst1 schon einmal an obstacle ausrichten
-                "!obst_1": State([(self.did_turn(Robot.ANGLE_FOR_90_DEGREES), "obst_2")], self.turn(SET_ANGLE_TURN_RATE)),
-                "obst_2": State([(self.did_drive(172), "obst_3")], self.drive_straight(DRIVE_SPEED)),
+                "!obst_1": State([(self.turned_degrees(84), "obst_2")], self.turn(SET_ANGLE_TURN_RATE)),
+                "obst_2": State([(self.drove_distance(172), "obst_3")], self.drive_straight(DRIVE_SPEED)),
                 # Not just angle for 90 degrees to make sure we do not crash into the obstacle
                 "!obst_3": State(
-                    [(self.did_turn(-82), "obst_4")],
+                    [(self.turned_degrees(-82), "obst_4")],
                     self.turn(-SET_ANGLE_TURN_RATE),
                 ),
-                "obst_4": State([(self.did_drive(420), "obst_5")], self.drive_straight(DRIVE_SPEED)),
-                "!obst_5": State([(self.did_turn(-81), "obst_6")], self.turn(-SET_ANGLE_TURN_RATE)),
-                "obst_6": State([(self.did_drive(172), "obst_7")], self.drive_straight(DRIVE_SPEED)),
-                "!obst_7": State([(self.did_turn(Robot.ANGLE_FOR_90_DEGREES), "obst_8")], self.turn(SET_ANGLE_TURN_RATE)),
+                "obst_4": State([(self.drove_distance(420), "obst_5")], self.drive_straight(DRIVE_SPEED)),
+                "!obst_5": State([(self.turned_degrees(-81), "obst_6")], self.turn(-SET_ANGLE_TURN_RATE)),
+                "obst_6": State([(self.drove_distance(172), "obst_7")], self.drive_straight(DRIVE_SPEED)),
+                "!obst_7": State([(self.turned_degrees(84), "obst_8")], self.turn(SET_ANGLE_TURN_RATE)),
                 "obst_8": State([(self.hit_rear, "start")], self.drive_back(DRIVE_SPEED)),
             },
             self.store_state,
@@ -252,41 +251,41 @@ class Robot:
         self.stop()
         states = resolve_stored_states(
             {
-                "!start": State([(self.did_drive(200), "turn_right")], self.drive_straight(DRIVE_SPEED)),
-                "!turn_right": State([(self.did_turn(-82), "drive_back")], self.turn(-TURN_RATE)),
+                "!start": State([(self.drove_distance(200), "turn_right")], self.drive_straight(DRIVE_SPEED)),
+                "!turn_right": State([(self.turned_degrees(-82), "drive_back")], self.turn(-TURN_RATE)),
                 "!drive_back": State([(self.hit_rear, "continue_driving_back")], self.drive_back(DRIVE_SPEED)),
-                "!continue_driving_back": State([(self.did_drive_time(700), "drive_straight")], self.drive_back(DRIVE_SPEED)),
-                "!drive_straight": State([(self.did_drive(5), "turn_left")], self.drive_straight(100)),
-                "!turn_left": State([(self.did_turn(81), "drive_straight2")], self.turn(TURN_RATE)),
-                "!drive_straight2": State([(self.did_drive(320), "turn_us_sensor")], self.drive_straight(DRIVE_SPEED)),
-                "!turn_us_sensor": State([(self.did_swerve_angle(110), "turn_right2")], self.swerve(SWERVE_SPEED)),
+                "!continue_driving_back": State([(self.drove_time(700), "drive_straight")], self.drive_back(DRIVE_SPEED)),
+                "!drive_straight": State([(self.drove_distance(5), "turn_left")], self.drive_straight(100)),
+                "!turn_left": State([(self.turned_degrees(81), "drive_straight2")], self.turn(TURN_RATE)),
+                "!drive_straight2": State([(self.drove_distance(320), "turn_us_sensor")], self.drive_straight(DRIVE_SPEED)),
+                "!turn_us_sensor": State([(self.swerved_angle(110), "turn_right2")], self.swerve(SWERVE_SPEED)),
                 # Align at wall before searching for box
-                "!turn_right2": State([(self.did_turn(-82), "drive_back2")], self.turn(-TURN_RATE)),
+                "!turn_right2": State([(self.turned_degrees(-82), "drive_back2")], self.turn(-TURN_RATE)),
                 "!drive_back2": State([(self.hit_rear, "continue_driving_back2")], self.drive_back(DRIVE_SPEED)),
-                "!continue_driving_back2": State([(self.did_drive_time(1000), "drive_straight3")], self.drive_back(DRIVE_SPEED)),
-                "!drive_straight3": State([(self.did_drive(5), "turn_left2")], self.drive_straight(100)),
-                "!turn_left2": State([(self.did_turn(82), "search")], self.turn(TURN_RATE)),
+                "!continue_driving_back2": State([(self.drove_time(1000), "drive_straight3")], self.drive_back(DRIVE_SPEED)),
+                "!drive_straight3": State([(self.drove_distance(5), "turn_left2")], self.drive_straight(100)),
+                "!turn_left2": State([(self.turned_degrees(82), "search")], self.turn(TURN_RATE)),
                 "!search": State([(box_detected, "search2")], self.drive_straight(BOX_SEARCH_SPEED)),
                 "!search2": State([(box_detected, "drive_next_to_box")], self.drive_straight(BOX_SEARCH_SPEED)),
-                "!drive_next_to_box": State([(self.did_drive(120), "turn_left3")], self.drive_straight(DRIVE_SPEED)),
-                "!turn_left3": State([(self.did_turn(81), "push_box_edge1")], self.turn(TURN_RATE)),
+                "!drive_next_to_box": State([(self.drove_distance(120), "turn_left3")], self.drive_straight(DRIVE_SPEED)),
+                "!turn_left3": State([(self.turned_degrees(81), "push_box_edge1")], self.turn(TURN_RATE)),
                 "!push_box_edge1": State([(True, "turn_sensor_back")], self.drive_back(DRIVE_SPEED)),
-                "turn_sensor_back": State([(self.did_swerve_angle(-110), "push_box_edge2")], self.swerve(-SWERVE_SPEED)),
-                "push_box_edge2": State([(self.did_drive_time(3000), "drive_straight4")], self.drive_back(DRIVE_SPEED)),
-                "!drive_straight4": State([(self.did_drive(15), "turn_right3")], self.drive_straight(DRIVE_SPEED)),
-                "!turn_right3": State([(self.did_turn(-77), "drive_back3")], self.turn(-TURN_RATE)),
-                "!drive_back3": State([(self.did_drive(-150), "turn_left4")], self.drive_back(DRIVE_SPEED)),
-                "!turn_left4": State([(self.did_turn(84), "drive_back4")], self.turn(TURN_RATE)),
+                "turn_sensor_back": State([(self.swerved_angle(-110), "push_box_edge2")], self.swerve(-SWERVE_SPEED)),
+                "push_box_edge2": State([(self.drove_time(3000), "drive_straight4")], self.drive_back(DRIVE_SPEED)),
+                "!drive_straight4": State([(self.drove_distance(15), "turn_right3")], self.drive_straight(DRIVE_SPEED)),
+                "!turn_right3": State([(self.turned_degrees(-77), "drive_back3")], self.turn(-TURN_RATE)),
+                "!drive_back3": State([(self.drove_distance(-150), "turn_left4")], self.drive_back(DRIVE_SPEED)),
+                "!turn_left4": State([(self.turned_degrees(84), "drive_back4")], self.turn(TURN_RATE)),
                 "!drive_back4": State([(self.hit_rear, "continue_driving_back3")], self.drive_back(DRIVE_SPEED)),
                 # Align before pushing box
-                "!continue_driving_back3": State([(self.did_drive_time(700), "drive_straight5")], self.drive_back(DRIVE_SPEED)),
-                "!drive_straight5": State([(self.did_drive(5), "turn_left5")], self.drive_straight(50)),
-                "!turn_left5": State([(self.did_turn(80), "push_box_corner")], self.turn(TURN_RATE)),
-                "!push_box_corner": State([(self.did_drive_time(3000), "drive_straight6")], self.drive_back(DRIVE_SPEED)),
-                "!drive_straight6": State([(self.did_drive(90), "turn_right4")], self.drive_straight(DRIVE_SPEED)),
-                "!turn_right4": State([(self.did_turn(-22), "drive_straight7")], self.turn(-TURN_RATE)),
+                "!continue_driving_back3": State([(self.drove_time(700), "drive_straight5")], self.drive_back(DRIVE_SPEED)),
+                "!drive_straight5": State([(self.drove_distance(5), "turn_left5")], self.drive_straight(50)),
+                "!turn_left5": State([(self.turned_degrees(80), "push_box_corner")], self.turn(TURN_RATE)),
+                "!push_box_corner": State([(self.drove_time(3000), "drive_straight6")], self.drive_back(DRIVE_SPEED)),
+                "!drive_straight6": State([(self.drove_distance(90), "turn_right4")], self.drive_straight(DRIVE_SPEED)),
+                "!turn_right4": State([(self.turned_degrees(-22), "drive_straight7")], self.turn(-TURN_RATE)),
                 "!drive_straight7": check_events(
-                    [(self.did_drive(500), Robot.NEXT_LEVEL_STATE)], self.drive_straight(DRIVE_SPEED)
+                    [(self.drove_distance(500), Robot.NEXT_LEVEL_STATE)], self.drive_straight(DRIVE_SPEED)
                 ),
             },
             self.store_state,
@@ -320,32 +319,32 @@ class Robot:
 
         states = resolve_stored_states(
             {
-                "!start": State([(self.did_turn(22), "start2")], self.turn(TURN_RATE)),
-                "!start2": State([(self.did_drive(170), "start_driving")], self.drive_straight(DRIVE_SPEED)),
+                "!start": State([(self.turned_degrees(22), "start2")], self.turn(TURN_RATE)),
+                "!start2": State([(self.drove_distance(170), "start_driving")], self.drive_straight(DRIVE_SPEED)),
                 "!start_driving": State([(True, "turn_color_sensor")], drive_left_curve),
-                "!turn_color_sensor": State([(self.did_swerve_angle(70), "drive_to_bright_wood")], self.swerve(300)),
+                "!turn_color_sensor": State([(self.swerved_angle(70), "drive_to_bright_wood")], self.swerve(300)),
                 "drive_to_bright_wood": State([(see_bright_wood, "drive_straight"), (see_void, "turn_right1")], drive_left_curve),
 
-                "!turn_right1": State([(self.did_turn(-13), "drive_to_bright_wood")], self.turn(-TURN_RATE)),
+                "!turn_right1": State([(self.turned_degrees(-13), "drive_to_bright_wood")], self.turn(-TURN_RATE)),
 
-                "!drive_straight": State([(self.did_drive(200), "drive_to_void")], self.drive_straight(DRIVE_SPEED)),
+                "!drive_straight": State([(self.drove_distance(200), "drive_to_void")], self.drive_straight(DRIVE_SPEED)),
                 "!drive_to_void": State([(see_void, "drive_back")], self.drive_straight(DRIVE_SPEED)),
-                "!drive_back": State([(self.did_drive(-30), "turn_left")], self.drive_back(DRIVE_SPEED)),
-                "!turn_left": State([(self.did_turn(80), "cross_bridge")], self.turn(TURN_RATE)),
+                "!drive_back": State([(self.drove_distance(-30), "turn_left")], self.drive_back(DRIVE_SPEED)),
+                "!turn_left": State([(self.turned_degrees(80), "cross_bridge")], self.turn(TURN_RATE)),
                 "!cross_bridge": State([(see_void, "turn_right2")], drive_left_curve),
 
-                "!turn_right2": State([(self.did_turn(-10), "check_void")], self.turn(-TURN_RATE)),
+                "!turn_right2": State([(self.turned_degrees(-10), "check_void")], self.turn(-TURN_RATE)),
                 "check_void": State([(see_void, "drive_back2"), (True, "cross_bridge")], None),
 
-                "!drive_back2": State([(self.did_drive(-40), "turn_left2")], self.drive_back(DRIVE_SPEED)),
-                "!turn_left2": State([(self.did_turn(110), "drive_straight2")], self.turn(TURN_RATE)),
+                "!drive_back2": State([(self.drove_distance(-40), "turn_left2")], self.drive_back(DRIVE_SPEED)),
+                "!turn_left2": State([(self.turned_degrees(110), "drive_straight2")], self.turn(TURN_RATE)),
 
-                "!drive_straight2": State([(self.did_drive(250), "drive_straight3")], self.drive_straight(DRIVE_SPEED)),
-                "!drive_straight3": State([(see_void, "turn_right3"), (self.did_drive(300), "start_driving2")], drive_left_curve),
-                "!turn_right3": State([(self.did_turn(-13), "start_driving2")], self.turn(-TURN_RATE)),
+                "!drive_straight2": State([(self.drove_distance(250), "drive_straight3")], self.drive_straight(DRIVE_SPEED)),
+                "!drive_straight3": State([(see_void, "turn_right3"), (self.drove_distance(300), "start_driving2")], drive_left_curve),
+                "!turn_right3": State([(self.turned_degrees(-13), "start_driving2")], self.turn(-TURN_RATE)),
                 "!start_driving2": State([(True, "turn_back_color_sensor")], drive_left_curve),
-                "!turn_back_color_sensor": State([(self.did_swerve_angle(-70), "drive_straight4")], self.swerve(-300)),
-                "!drive_straight4": check_events([(self.did_drive(600), Robot.NEXT_LEVEL_STATE)], self.drive_straight(DRIVE_SPEED)),
+                "!turn_back_color_sensor": State([(self.swerved_angle(-70), "drive_straight4")], self.swerve(-300)),
+                "!drive_straight4": check_events([(self.drove_distance(600), Robot.NEXT_LEVEL_STATE)], self.drive_straight(DRIVE_SPEED)),
             },
             self.store_state,
         )
@@ -400,26 +399,26 @@ class Robot:
 
         states = resolve_stored_states(
             {
-                "!start": State([(self.did_turn(84), "drive_to_left_wall")], self.turn(TURN_RATE)),
-                "!drive_to_left_wall": State([(self.did_drive(300), "turn_back_to_left_wall")], self.drive_straight(DRIVE_SPEED)),
-                "!turn_back_to_left_wall": State([(self.did_turn(-84), "adjust_left_wall_touch")], self.turn(-TURN_RATE)),
+                "!start": State([(self.turned_degrees(84), "drive_to_left_wall")], self.turn(TURN_RATE)),
+                "!drive_to_left_wall": State([(self.drove_distance(300), "turn_back_to_left_wall")], self.drive_straight(DRIVE_SPEED)),
+                "!turn_back_to_left_wall": State([(self.turned_degrees(-84), "adjust_left_wall_touch")], self.turn(-TURN_RATE)),
                 "adjust_left_wall_touch": State([(self.hit_rear, "adjust_left_wall_align")], self.drive_back(DRIVE_SPEED)),
-                "!adjust_left_wall_align": State([(self.did_drive_time(700), "")], None),
-                "!detach_left_wall": State([(self.did_drive(5), "turn_back_to_right_wall")], self.drive_straight(DRIVE_SPEED)),
-                "!turn_back_to_right_wall": State([(self.did_turn(84), "adjust_before_drive")], self.turn(TURN_RATE)),
+                "!adjust_left_wall_align": State([(self.drove_time(700), "")], None),
+                "!detach_left_wall": State([(self.drove_distance(5), "turn_back_to_right_wall")], self.drive_straight(DRIVE_SPEED)),
+                "!turn_back_to_right_wall": State([(self.turned_degrees(84), "adjust_before_drive")], self.turn(TURN_RATE)),
 
                 "adjust_before_drive": State([(self.hit_rear, "continue_driving_back")], self.drive_back(DRIVE_SPEED)),
-                "!continue_driving_back": State([(self.did_drive_time(700), "check_wall_before_right")], None),
+                "!continue_driving_back": State([(self.drove_time(700), "check_wall_before_right")], None),
                 "check_wall_before_right": State([(wall_detected, "stop_and_turn_right")], self.drive_straight(DRIVE_SPEED)),
-                "!stop_and_turn_right": State([(self.did_turn(-84), "turn_right_before_drive")], self.turn(-TURN_RATE)),
-                "!turn_right_before_drive": State([(self.did_turn(-84), "adjust_before_drive2")], self.turn(-TURN_RATE)),
-                
+                "!stop_and_turn_right": State([(self.turned_degrees(-84), "turn_right_before_drive")], self.turn(-TURN_RATE)),
+                "!turn_right_before_drive": State([(self.turned_degrees(-84), "adjust_before_drive2")], self.turn(-TURN_RATE)),
+
                 "adjust_before_drive2": State([(self.hit_rear, "continue_driving_back2")], self.drive_back(DRIVE_SPEED)),
-                "!continue_driving_back2": State([(self.did_drive_time(700), "check_wall_before_left")], self.drive_back(DRIVE_SPEED)),
+                "!continue_driving_back2": State([(self.drove_time(700), "check_wall_before_left")], self.drive_back(DRIVE_SPEED)),
                 "check_wall_before_left": State([(wall_detected, "stop_and_turn_left")], self.drive_straight(DRIVE_SPEED)),
-                "!stop_and_turn_left": State([(self.did_turn(84), "drive_before_left")], self.turn(TURN_RATE)),
-                "!drive_before_left": State([(self.did_drive(SHORT_DRIVE_DISTANCE), "turn_left_before_drive")], self.drive_straight(DRIVE_SPEED)),
-                "!turn_left_before_drive": State([(self.did_turn(84), "adjust_before_drive")], self.turn(TURN_RATE)),
+                "!stop_and_turn_left": State([(self.turned_degrees(84), "drive_before_left")], self.turn(TURN_RATE)),
+                "!drive_before_left": State([(self.drove_distance(SHORT_DRIVE_DISTANCE), "turn_left_before_drive")], self.drive_straight(DRIVE_SPEED)),
+                "!turn_left_before_drive": State([(self.turned_degrees(84), "adjust_before_drive")], self.turn(TURN_RATE)),
             },
             self.store_state,
         )
