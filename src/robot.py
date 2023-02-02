@@ -73,7 +73,7 @@ class Robot:
         cur_state.on_enter()
 
         while not self.course.should_abort():
-            if callback is not None and callback() == True:
+            if callback is not None and callback() is True:
                 return
             successor = cur_state.check_conditions()
             if successor:
@@ -400,34 +400,26 @@ class Robot:
 
         states = resolve_stored_states(
             {
-                "!start": State([(self.did_drive(-30), "turn_right")], self.drive_back(DRIVE_SPEED)),
-                "!turn_right": State(
-                    [(self.did_turn(-Robot.ANGLE_FOR_90_DEGREES), "adjust_before_drive")],
-                    self.turn(-TURN_RATE),
-                ),
+                "!start": State([(self.did_turn(84), "drive_to_left_wall")], self.turn(TURN_RATE)),
+                "!drive_to_left_wall": State([(self.did_drive(300), "turn_back_to_left_wall")], self.drive_straight(DRIVE_SPEED)),
+                "!turn_back_to_left_wall": State([(self.did_turn(-84), "adjust_left_wall_touch")], self.turn(-TURN_RATE)),
+                "adjust_left_wall_touch": State([(self.hit_rear, "adjust_left_wall_align")], self.drive_back(DRIVE_SPEED)),
+                "!adjust_left_wall_align": State([(self.did_drive_time(700), "")], None),
+                "!detach_left_wall": State([(self.did_drive(5), "turn_back_to_right_wall")], self.drive_straight(DRIVE_SPEED)),
+                "!turn_back_to_right_wall": State([(self.did_turn(84), "adjust_before_drive")], self.turn(TURN_RATE)),
+
                 "adjust_before_drive": State([(self.hit_rear, "continue_driving_back")], self.drive_back(DRIVE_SPEED)),
-                "!continue_driving_back": State(
-                    [(self.did_drive_time(700), "check_wall_before_right")], self.drive_back(DRIVE_SPEED)
-                ),
+                "!continue_driving_back": State([(self.did_drive_time(700), "check_wall_before_right")], None),
                 "check_wall_before_right": State([(wall_detected, "stop_and_turn_right")], self.drive_straight(DRIVE_SPEED)),
-                "!stop_and_turn_right": State(
-                    [(self.did_turn(-Robot.ANGLE_FOR_90_DEGREES), "turn_right_before_drive")],
-                    self.turn(-TURN_RATE),
-                ),
-                "!turn_right_before_drive": State(
-                    [(self.did_turn(-Robot.ANGLE_FOR_90_DEGREES), "adjust_before_drive2")],
-                    self.turn(-TURN_RATE),
-                ),
+                "!stop_and_turn_right": State([(self.did_turn(-84), "turn_right_before_drive")], self.turn(-TURN_RATE)),
+                "!turn_right_before_drive": State([(self.did_turn(-84), "adjust_before_drive2")], self.turn(-TURN_RATE)),
+                
                 "adjust_before_drive2": State([(self.hit_rear, "continue_driving_back2")], self.drive_back(DRIVE_SPEED)),
-                "!continue_driving_back2": State(
-                    [(self.did_drive_time(700), "check_wall_before_left")], self.drive_back(DRIVE_SPEED)
-                ),
+                "!continue_driving_back2": State([(self.did_drive_time(700), "check_wall_before_left")], self.drive_back(DRIVE_SPEED)),
                 "check_wall_before_left": State([(wall_detected, "stop_and_turn_left")], self.drive_straight(DRIVE_SPEED)),
-                "!stop_and_turn_left": State(
-                    [(self.did_turn(Robot.ANGLE_FOR_90_DEGREES), "drive_before_left")], self.turn(TURN_RATE)
-                ),
-                "!drive_before_left": State([(self.did_drive(SHORT_DRIVE_DISTANCE), "start")], self.drive_straight(DRIVE_SPEED)),
-                "!turn_left": State([(self.did_turn(Robot.ANGLE_FOR_90_DEGREES), "adjust_before_drive")], self.turn(TURN_RATE)),
+                "!stop_and_turn_left": State([(self.did_turn(84), "drive_before_left")], self.turn(TURN_RATE)),
+                "!drive_before_left": State([(self.did_drive(SHORT_DRIVE_DISTANCE), "turn_left_before_drive")], self.drive_straight(DRIVE_SPEED)),
+                "!turn_left_before_drive": State([(self.did_turn(84), "adjust_before_drive")], self.turn(TURN_RATE)),
             },
             self.store_state,
         )
