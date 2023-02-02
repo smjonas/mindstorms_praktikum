@@ -270,7 +270,7 @@ class Robot:
                 "!search2": State([(box_detected, "drive_next_to_box")], self.drive_straight(BOX_SEARCH_SPEED)),
                 "!drive_next_to_box": State([(self.did_drive(120), "turn_left3")], self.drive_straight(DRIVE_SPEED)),
                 "!turn_left3": State([(self.did_turn(81), "push_box_edge1")], self.turn(TURN_RATE)),
-                "!push_box_edge1": State([(self.did_drive_time(0), "turn_sensor_back")], self.drive_back(DRIVE_SPEED)),
+                "!push_box_edge1": State([(True, "turn_sensor_back")], self.drive_back(DRIVE_SPEED)),
                 "turn_sensor_back": State([(self.did_swerve_angle(-110), "push_box_edge2")], self.swerve(-SWERVE_SPEED)),
                 "push_box_edge2": State([(self.did_drive_time(3000), "drive_straight4")], self.drive_back(DRIVE_SPEED)),
                 "!drive_straight4": State([(self.did_drive(15), "turn_right3")], self.drive_straight(DRIVE_SPEED)),
@@ -339,7 +339,7 @@ class Robot:
 
                 "!drive_back2": State([(self.did_drive(-40), "turn_left2")], self.drive_back(DRIVE_SPEED)),
                 "!turn_left2": State([(self.did_turn(110), "drive_straight2")], self.turn(TURN_RATE)),
-                
+
                 "!drive_straight2": State([(self.did_drive(250), "drive_straight3")], self.drive_straight(DRIVE_SPEED)),
                 "!drive_straight3": State([(see_void, "turn_right3"), (self.did_drive(300), "start_driving2")], drive_left_curve),
                 "!turn_right3": State([(self.did_turn(-13), "start_driving2")], self.turn(-TURN_RATE)),
