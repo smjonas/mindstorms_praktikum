@@ -279,7 +279,7 @@ class Robot:
                 "!drive_back4": State([(self.hit_rear, "continue_driving_back3")], self.drive_back(DRIVE_SPEED)),
                 # Align before pushing box
                 "!continue_driving_back3": State([(self.drove_time(700), "drive_straight5")], self.drive_back(DRIVE_SPEED)),
-                "!drive_straight5": State([(self.drove_distance(5), "turn_left5")], self.drive_straight(50)),
+                "!drive_straight5": State([(self.drove_distance(1), "turn_left5")], self.drive_straight(50)),
                 "!turn_left5": State([(self.turned_degrees(80), "push_box_corner")], self.turn(TURN_RATE)),
                 "!push_box_corner": State([(self.drove_time(3000), "drive_straight6")], self.drive_back(DRIVE_SPEED)),
                 "!drive_straight6": State([(self.drove_distance(90), "turn_right4")], self.drive_straight(DRIVE_SPEED)),
@@ -319,7 +319,7 @@ class Robot:
 
         states = resolve_stored_states(
             {
-                "!start": State([(self.turned_degrees(22), "start2")], self.turn(TURN_RATE)),
+                "!start": State([(self.turned_degrees(26), "start2")], self.turn(TURN_RATE)),
                 "!start2": State([(self.drove_distance(170), "start_driving")], self.drive_straight(DRIVE_SPEED)),
                 "!start_driving": State([(True, "turn_color_sensor")], drive_left_curve),
                 "!turn_color_sensor": State([(self.swerved_angle(70), "drive_to_bright_wood")], self.swerve(300)),
@@ -408,12 +408,12 @@ class Robot:
 
         states = resolve_stored_states(
             {
-                "!start": State([(self.drove_distance(300), "turn_parallel_to_left_wall")], self.drive_straight(DRIVE_SPEED)),
+                "!start": State([(self.drove_distance(300), "turn_parallel_to_left_wall")], self.drive_straight(3 * DRIVE_SPEED)),
                 "!turn_parallel_to_left_wall": State([(self.turned_degrees(84), "drive_to_left_wall")], self.turn(TURN_RATE)),
-                "!drive_to_left_wall": State([(self.drove_distance(200), "turn_back_to_left_wall")], self.drive_straight(DRIVE_SPEED)),
+                "!drive_to_left_wall": State([(self.drove_distance(200), "turn_back_to_left_wall")], self.drive_straight(3 * DRIVE_SPEED)),
                 "!turn_back_to_left_wall": State([(self.turned_degrees(-84), "adjust_left_wall_touch")], self.turn(-TURN_RATE)),
-                "adjust_left_wall_touch": State([(self.hit_rear, "adjust_left_wall_align")], self.drive_back(DRIVE_SPEED)),
-                "!adjust_left_wall_align": State([(self.drove_time(700), "detach_left_wall")], None),
+                "adjust_left_wall_touch": State([(self.hit_rear, "adjust_left_wall_align")], self.drive_back(3 * DRIVE_SPEED)),
+                "!adjust_left_wall_align": State([(self.drove_time(300), "detach_left_wall")], None),
                 "!detach_left_wall": State([(self.drove_distance(5), "turn_back_to_right_wall")], self.drive_straight(DRIVE_SPEED)),
                 "!turn_back_to_right_wall": State([(self.turned_degrees(84), "start_swerving")], self.turn(TURN_RATE)),
                 "start_swerving": State([(True, "adjust_before_drive")], enable_swerving),
@@ -448,3 +448,4 @@ class Robot:
                 return True
 
         self.level_loop(states, callback)
+        self.stop()
