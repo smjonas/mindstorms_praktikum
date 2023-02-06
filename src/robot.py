@@ -363,8 +363,10 @@ class Robot:
         SWERVE_SPEED = 300
         MOTOR_MIN_ANGLE, MOTOR_MAX_ANGLE = 0, 90
         self.motor_target = MOTOR_MAX_ANGLE
-        self.color_sensor_motor.run(SWERVE_SPEED)
         self.found_red, self.found_white = False, False
+
+        self.should_swerve = False
+        self.beeped = False
 
         def swerve_color_sensor():
             angle = self.color_sensor_motor.angle()
@@ -383,10 +385,13 @@ class Robot:
             white = r > 40 and g > 60 and b > 50
             if red and not self.found_red:
                 self.found_red = True
-                ev3.speaker.beep(frequency=100, duration=10)
             elif white and not self.found_white:
                 self.found_white = True
+
+            # Only beep if just first color is found
+            if self.found_red != self.found_white and not self.beeped:
                 ev3.speaker.beep(frequency=500, duration=10)
+                self.beeped = True
 
         # Save information to check difference in future states
         def store_state():
@@ -397,16 +402,21 @@ class Robot:
             angle = self.color_sensor_motor.angle()
             return self.dist_sensor.distance() < OBSTACLE_DISTANCE_THRESHOLD and angle < 45
 
+        def enable_swerving():
+            self.should_swerve = True
+            self.color_sensor_motor.run(SWERVE_SPEED)
+
         states = resolve_stored_states(
             {
                 "!start": State([(self.drove_distance(300), "turn_parallel_to_left_wall")], self.drive_straight(DRIVE_SPEED)),
                 "!turn_parallel_to_left_wall": State([(self.turned_degrees(84), "drive_to_left_wall")], self.turn(TURN_RATE)),
-                "!drive_to_left_wall": State([(self.drove_distance(300), "turn_back_to_left_wall")], self.drive_straight(DRIVE_SPEED)),
+                "!drive_to_left_wall": State([(self.drove_distance(200), "turn_back_to_left_wall")], self.drive_straight(DRIVE_SPEED)),
                 "!turn_back_to_left_wall": State([(self.turned_degrees(-84), "adjust_left_wall_touch")], self.turn(-TURN_RATE)),
                 "adjust_left_wall_touch": State([(self.hit_rear, "adjust_left_wall_align")], self.drive_back(DRIVE_SPEED)),
                 "!adjust_left_wall_align": State([(self.drove_time(700), "detach_left_wall")], None),
                 "!detach_left_wall": State([(self.drove_distance(5), "turn_back_to_right_wall")], self.drive_straight(DRIVE_SPEED)),
-                "!turn_back_to_right_wall": State([(self.turned_degrees(84), "adjust_before_drive")], self.turn(TURN_RATE)),
+                "!turn_back_to_right_wall": State([(self.turned_degrees(84), "start_swerving")], self.turn(TURN_RATE)),
+                "start_swerving": State([(True, "adjust_before_drive")], enable_swerving),
 
                 "adjust_before_drive": State([(self.hit_rear, "continue_driving_back")], self.drive_back(DRIVE_SPEED)),
                 "!continue_driving_back": State([(self.drove_time(700), "check_wall_before_right")], None),
@@ -428,11 +438,13 @@ class Robot:
         cur_state.on_enter()
 
         def callback():
-            swerve_color_sensor()
+            if self.should_swerve:
+                swerve_color_sensor()
             check_colors()
             if self.found_red and self.found_white:
+                self.stop()
+                ev3.speaker.beep(frequency=300, duration=200)
                 self.course.running = False
                 return True
 
         self.level_loop(states, callback)
-        self.stop()
