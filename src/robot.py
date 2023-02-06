@@ -147,7 +147,7 @@ class Robot:
     # Methods for stages of course
     # Stage 1: Following a white line with gaps and an obstacle
     def lines(self):
-        LIGHT, DARK, K = 65, 18, 0.375
+        LIGHT, DARK, K = 59, 16, 0.375
         GRAY = (LIGHT + DARK) / 2
 
         ON_LINE_TURN_RATE = 30
@@ -156,7 +156,7 @@ class Robot:
         SET_ANGLE_TURN_RATE = 40
         DRIVE_SPEED = 200
 
-        GAP_TURNBACK_ANGLE = 110
+        GAP_TURNBACK_ANGLE = 102
         OBSTACLE_DISTANCE_THRESHOLD = 70
 
         OBSTACLE_STATE = "obst_1"
@@ -399,11 +399,12 @@ class Robot:
 
         states = resolve_stored_states(
             {
-                "!start": State([(self.turned_degrees(84), "drive_to_left_wall")], self.turn(TURN_RATE)),
+                "!start": State([(self.drove_distance(300), "turn_parallel_to_left_wall")], self.drive_straight(DRIVE_SPEED)),
+                "!turn_parallel_to_left_wall": State([(self.turned_degrees(84), "drive_to_left_wall")], self.turn(TURN_RATE)),
                 "!drive_to_left_wall": State([(self.drove_distance(300), "turn_back_to_left_wall")], self.drive_straight(DRIVE_SPEED)),
                 "!turn_back_to_left_wall": State([(self.turned_degrees(-84), "adjust_left_wall_touch")], self.turn(-TURN_RATE)),
                 "adjust_left_wall_touch": State([(self.hit_rear, "adjust_left_wall_align")], self.drive_back(DRIVE_SPEED)),
-                "!adjust_left_wall_align": State([(self.drove_time(700), "")], None),
+                "!adjust_left_wall_align": State([(self.drove_time(700), "detach_left_wall")], None),
                 "!detach_left_wall": State([(self.drove_distance(5), "turn_back_to_right_wall")], self.drive_straight(DRIVE_SPEED)),
                 "!turn_back_to_right_wall": State([(self.turned_degrees(84), "adjust_before_drive")], self.turn(TURN_RATE)),
 
