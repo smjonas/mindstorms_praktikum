@@ -148,7 +148,8 @@ class Robot:
     # Methods for stages of course
     # Stage 1: Following a white line with gaps and an obstacle
     def lines(self):
-        LIGHT, DARK, K = 65, 18, 0.375
+        LIGHT, DARK = 65, 18
+        K_P, K_I, K_D = 0.375, 0.1, 0.1
         GRAY = (LIGHT + DARK) / 2
 
         ON_LINE_TURN_RATE = 30
@@ -171,15 +172,20 @@ class Robot:
 
         def is_gray():
             brightness = self.color_sensor.reflection()
-            return brightness > DARK and brightness < LIGHT
+            gray = brightness > DARK and brightness < LIGHT
+            # if gray:
+            #     self.integral = 0
+            #     self.prev_error = 0
+            return gray
 
         def drive_regulated():
+            dt = 0.01
             brightness = self.color_sensor.reflection()
-            # if brightness <= 20:
-            #     turn_rate = 50
-            # else:
-            delta = brightness - GRAY
-            turn_rate = K * delta
+            error = brightness - GRAY
+            self.integral += error * dt
+            derivative = (error - self.prev_error) / dt
+            turn_rate = K_P * error + K_I * self.integral + K_D * derivative
+            self.prev_error = error
             self.robot.drive(ON_LINE_DRIVE_SPEED, turn_rate)
 
         # Defining states
@@ -227,6 +233,8 @@ class Robot:
             self.store_state,
         )
 
+        self.integral = 0
+        self.prev_error = 0
         self.level_loop(states)
         self.robot.stop()
 
@@ -339,7 +347,7 @@ class Robot:
 
                 "!drive_back2": State([(self.did_drive(-40), "turn_left2")], self.drive_back(DRIVE_SPEED)),
                 "!turn_left2": State([(self.did_turn(110), "drive_straight2")], self.turn(TURN_RATE)),
-                
+
                 "!drive_straight2": State([(self.did_drive(250), "drive_straight3")], self.drive_straight(DRIVE_SPEED)),
                 "!drive_straight3": State([(see_void, "turn_right3"), (self.did_drive(300), "start_driving2")], drive_left_curve),
                 "!turn_right3": State([(self.did_turn(-13), "start_driving2")], self.turn(-TURN_RATE)),
