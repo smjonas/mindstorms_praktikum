@@ -102,8 +102,16 @@ reamd
 - Optimierung des Brückenlevels
 - Werte beim Paket-Level angepasst
 
+### 30.01.23 - 06.02.23
+- Ein paar Zustände verständlicher benennen
+- Zustände hinzufügen, um bei Farbfeld zu Beginn besser ausgerichtet zu sein
+
+### 06.02.23
+- Auf Messwerte zu reagieren stellt sich mit Zuständen als Dictionary-Einträgen als schwierig heraus
+- Deshalb Problem bei Delivery: Da US-Sensor leicht schräg, erkennt Box früher je weiter weg sie seitlich ist
+- PID-Regler zum Linienfolgen stellt sich als kompliziert heraus, vermutlich da Farbsensor sehr weit von Drehzentrum entfernt
+
+
 TODO:
-- better state names?
-- extract check_level_state
-- add third argument to state constructor for debugging
-- PID-Regler fürs Linienfahren
+- better state names
+- drive closer to box when far away
