@@ -227,11 +227,27 @@ class Robot:
 
         SWERVE_SPEED = 60
         MAX_BOX_DISTANCE = 340
+        BOX_CLOSE_DISTANCE = 100
         BOX_SEARCH_SPEED = 100
 
         def box_detected():
             dist = self.dist_sensor.distance()
             return dist < MAX_BOX_DISTANCE
+
+        def box_detected_close():
+            dist = self.dist_sensor.distance()
+            return dist < BOX_CLOSE_DISTANCE
+
+        def box_detected_far():
+            dist = self.dist_sensor.distance()
+            if dist >= BOX_CLOSE_DISTANCE and dist < MAX_BOX_DISTANCE:
+                self.boxdist = dist
+                return True
+            return False
+
+        def reached_box():
+            delta = self.robot.distance() - self.prev_state[0] - BOX_CLOSE_DISTANCE
+            return delta >= self.boxdist
 
         def check_events(transitions, on_enter=None):
             new_transitions = [
@@ -262,8 +278,12 @@ class Robot:
                 "!turn_left2": State([(self.turned_degrees(82), "search")], self.turn(TURN_RATE)),
 
                 # Drive next to the box, search 2 times to deal with wrong us sensor values
-                "!search": State([(box_detected, "search2")], self.drive_straight(BOX_SEARCH_SPEED)),
-                "!search2": State([(box_detected, "drive_next_to_box")], self.drive_straight(BOX_SEARCH_SPEED)),
+                "search": State([(box_detected, "search2")], self.drive_straight(BOX_SEARCH_SPEED)),
+                "search2": State([(box_detected_close, "drive_next_to_box"), (box_detected_far), "turn_right5"], self.drive_straight(BOX_SEARCH_SPEED)),
+                # Drive closer to box if too far away to deal with problems from angled us sensor
+                "!turn_right5": State([(self.turned_degrees(-82), "drive_closer")], self.turn(-TURN_RATE)),
+                "!drive_closer": State([(reached_box, "turn_left6")], self.drive_straight(DRIVE_SPEED)),
+                "!turn_left6": State([(self.turned_degrees(82), "drive_next_to_box")], self.turn(TURN_RATE)),
                 "!drive_next_to_box": State([(self.drove_distance(120), "turn_left3")], self.drive_straight(DRIVE_SPEED)),
 
                 # Box is to the right of robot -> Robot pushed it to the wall with its back
