@@ -111,7 +111,9 @@ reamd
 - Deshalb Problem bei Delivery: Da US-Sensor leicht schräg, erkennt Box früher je weiter weg sie seitlich ist
 - PID-Regler zum Linienfolgen stellt sich als kompliziert heraus, vermutlich da Farbsensor sehr weit von Drehzentrum entfernt
 
+### 06.02.23 - 13.02.23
+- Zustandsautomaten verständlicher machen
+- Boxsuche verbessern
 
-TODO:
-- better state names
-- drive closer to box when far away
+### 13.02.23
+WETTBEWERB!!!!
