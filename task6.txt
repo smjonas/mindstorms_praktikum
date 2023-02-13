@@ -1,0 +1,18 @@
+Präemptives Multitasking
+Eine Art von Multitasking, bei der jedem Prozess eine bestimmte Zeit zur Verfügung steht.
+Nach Ablauf dieser Zeit wird der Prozess unterbrochen und ein anderer Prozess kann vom Scheduler ausgewählt werden.
+Die Dauer ist entweder fest oder abhängig von der Priorität des Prozesses.
+
+Kooperatives Multitasking
+Eine Art von Multitasking bei der jeder Prozess "freiwillig" seine Kontrolle aufgibt.
+Der Scheduler wählt dann die nächste Aufgabe aus - auch hier kann diese Entscheidung auf Basis von Prioritäten geschehen.
+
+Unterschied kooperatives vs. preemptive multitasking:
+Bei kooperativem Multitasking müssen Aufgaben sorgfältig entworfen werden, damit manche Prozesse nicht
+blockiert werden.
+
+Warum sollte präemptives Multitasking auf einem Microcontroller nicht eingesetzt werden?
+Präemptives Multitasking hat einen höheren Bedarf an CPU und Speicher.
+Da diese Ressourcen auf einem Microcontroller knapper sind, wird eher kooperatives Multitasking
+verwendet. Diese Art des Multitaskings ist leichter zu implementieren, da kein komplexer Scheduler
+notwendig ist.
